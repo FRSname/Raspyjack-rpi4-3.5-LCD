@@ -11,6 +11,11 @@
   <p><strong>Portable Raspberry Pi offensive toolkit</strong> with LCD control, payload launcher, WebUI, and Payload IDE.</p>
 </div>
 
+<div align="center">
+  <img src="github-img/mpi3501_preview.jpg" width="520" alt="RaspyJack running on MPI3501 3.5 inch 480×320 touchscreen"/>
+  <p><em>RaspyJack on a 3.5" MPI3501 480×320 touchscreen with on-screen virtual buttons</em></p>
+</div>
+
 ---
 
 ## ⚠️ Legal / Safety
@@ -25,7 +30,8 @@ RaspyJack is for **authorized security testing, research, and education only**.
 
 ## ✨ What RaspyJack includes
 
-- LCD-driven handheld-style interface (Waveshare 1.44" HAT)
+- LCD-driven handheld-style interface (Waveshare 1.44" HAT **or** MPI3501 3.5" 480×320 touchscreen)
+- On-screen virtual touch buttons when using the MPI3501 (no physical joystick needed)
 - Payload categories (reconnaissance, interception, exfiltration, etc.)
 - Loot collection + browsing
 - WebUI remote control dashboard
@@ -48,10 +54,17 @@ Check the WIKI for more ! https://github.com/7h30th3r0n3/Raspyjack/wiki
   </tr>
   <tr>
     <td><strong>Waveshare 1.44" LCD HAT</strong></td>
-    <td>SPI TFT + joystick + 3 buttons</td>
+    <td>SPI TFT 128×128 + joystick + 3 buttons</td>
     <td>
       <a href="https://s.click.aliexpress.com/e/_c3HTOQQn">Buy</a><br/>
       <a href="https://s.click.aliexpress.com/e/_EwDqSv4">Buy</a>
+    </td>
+  </tr>
+  <tr>
+    <td><strong>MPI3501 3.5" LCD (alternative)</strong></td>
+    <td>SPI TFT 480×320, ILI9486 + XPT2046 resistive touch, FBTFT framebuffer</td>
+    <td>
+      <a href="https://s.click.aliexpress.com/e/_oBa2coe">Buy</a>
     </td>
   </tr>
   <tr>
@@ -98,7 +111,7 @@ Check the WIKI for more ! https://github.com/7h30th3r0n3/Raspyjack/wiki
   </tr>
 </table>
 
-<p><em>Note:</em> Raspberry Pi 4/5 is not fully tested yet. It should work trough Webui but screen probably need some ajustement. Feedback is welcome.</p>
+<p><em>Note:</em> Raspberry Pi 4/5 is not fully tested yet. It should work through WebUI but screen may need adjustment. The MPI3501 display is a good option for Pi 3/4/5 as it uses the standard Linux framebuffer. Feedback is welcome.</p>
 
 ---
 
@@ -148,7 +161,53 @@ Examples commonly used:
 
 ---
 
-## 🚀 Install
+## �️ MPI3501 3.5" Display Support (480×320)
+
+RaspyJack now supports the **MPI3501 3.5" 480×320 SPI touchscreen** as an alternative to the original Waveshare 1.44" HAT. This is a larger, higher-resolution display with resistive touch input.
+
+### What changed
+
+| Area | Details |
+|---|---|
+| **Display driver** | New `LCD_480x320.py` — writes PIL images to the Linux framebuffer (`/dev/fb*`) instead of bit-banging SPI. Uses the kernel FBTFT driver installed by [goodtft/LCD-show](https://github.com/goodtft/LCD-show). |
+| **Touch input** | `rj_input.py` rewritten for `python3-evdev`. Reads the XPT2046 touch controller via the kernel `ads7846` overlay. Auto-loads calibration from `/usr/share/X11/xorg.conf.d/99-calibration.conf`. |
+| **Virtual buttons** | Since the MPI3501 has no physical joystick/buttons, an on-screen button bar (8 buttons) is rendered at the bottom 50 px of the display. Touch zones map to UP/DOWN/LEFT/RIGHT/OK/KEY1/KEY2/KEY3. |
+| **Framebuffer claiming** | `_claim_framebuffer()` stops getty, display-manager, and detaches the text console (`con2fbmap`) so RaspyJack has exclusive access to the framebuffer — no more flashing. |
+| **Auto-rotation** | The MPI3501 framebuffer is natively 320×480 (portrait). The driver auto-detects this via `/sys/class/graphics/fb*/virtual_size` and rotates the image 90° before writing. |
+| **Payload compatibility** | `payloads/_input_helper.py` monkey-patches `RPi.GPIO` so payloads that call `GPIO.input()` don't crash (returns "not pressed"). `rj_input.stop_listener()` releases the exclusive evdev grab before launching a payload subprocess, and re-grabs after. |
+| **WebUI** | Canvas elements updated to 480×320 with 3:2 aspect ratio. Device preview is 700 px wide on desktop. Terminal moved below the screen preview. |
+| **Install script** | `install_raspyjack.sh` clones `goodtft/LCD-show`, runs `LCD35-show`, disables the desktop (multi-user.target), stops getty@tty1, and detaches the console from the LCD framebuffer. |
+
+### Environment variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `RJ_FB_DEVICE` | auto-detect | Force a specific framebuffer device, e.g. `/dev/fb1` |
+| `RJ_FB_ROTATE` | `auto` | Override rotation: `0`, `90`, `180`, `270`, or `auto` |
+| `RJ_TOUCH_SWAP_XY` | from calibration file | `1` to swap X/Y axes, `0` to disable |
+| `RJ_TOUCH_CAL` | from calibration file | Comma-separated calibration: `xmin,xmax,ymin,ymax` (e.g. `3936,227,268,3880`) |
+| `RJ_TOUCH_DEBUG` | `0` | `1` to log raw → calibrated touch coordinates for the first 20 touches |
+| `RJ_TOUCH_BUTTONS` | `1` | `0` to hide the on-screen button bar |
+
+### Files added / modified
+
+```text
+LCD_480x320.py          NEW   – framebuffer display driver + button bar + rotation
+LCD_Config.py           MOD   – simplified (GPIO/SPI managed by kernel)
+LCD_1in44.py            MOD   – compatibility shim (re-exports LCD_480x320)
+rj_input.py             MOD   – evdev touch + calibration + two-tier zones + grab handoff
+raspyjack.py            MOD   – safe GPIO wrapper, payload touch handoff
+payloads/_input_helper.py MOD – GPIO monkey-patch, rj_input auto-start in payloads
+gui_conf.json           MOD   – MPI3501 / framebuffer / evdev config
+install_raspyjack.sh    MOD   – LCD-show install, console/desktop disable
+web/index.html          MOD   – 480×320 canvas, layout restructured
+web/app.js              MOD   – hi-DPI setup with 480×320
+index.html              MOD   – 480×320 canvas, layout restructured
+```
+
+---
+
+## �🚀 Install
 
 From a fresh Raspberry Pi OS Lite install:
 
