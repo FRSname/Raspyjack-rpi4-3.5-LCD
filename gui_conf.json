@@ -8,6 +8,13 @@
         "SELECTED_TEXT_BACKGROUND": "#2d0fff",
         "TEXT": "#05ff00"
     },
+    "DISPLAY": {
+        "WIDTH": 480,
+        "HEIGHT": 320,
+        "DRIVER": "LCD_480x320",
+        "TYPE": "MPI3501",
+        "INTERFACE": "framebuffer"
+    },
     "LOCK": {
         "auto_lock_seconds": 0,
         "enabled": false,
@@ -26,5 +33,10 @@
         "KEY_PRESS_PIN": 13,
         "KEY_RIGHT_PIN": 26,
         "KEY_UP_PIN": 6
+    },
+    "TOUCH": {
+        "DRIVER": "evdev",
+        "DEVICE_NAMES": ["ADS7846 Touchscreen", "XPT2046"],
+        "NOTE": "Touch calibration is handled by the kernel (ads7846 overlay). Use evdev-calibrator or xinput_calibrator if needed."
     }
 }

@@ -56,7 +56,7 @@ PINS: dict[str, int] = {
 # ---------------------------------------------------------------------------
 LCD = LCD_1in44.LCD()
 LCD.LCD_Init(LCD_1in44.SCAN_DIR_DFT)
-WIDTH, HEIGHT = 128, 128
+WIDTH, HEIGHT = 480, 320
 
 CELL = 8                      # size of a grid cell in pixels → 16×16 board
 GRID_W, GRID_H = WIDTH // CELL, HEIGHT // CELL

@@ -1,60 +1,66 @@
 ##
- #  @filename   :   DEV_Config.py
- #  @brief      :   LCD hardware interface implements (GPIO, SPI)
- #  @author     :   Yehui from Waveshare
+ #  @filename   :   LCD_Config.py
+ #  @brief      :   LCD hardware configuration for 480×320 MPI3501
  #
- #  Copyright (C) Waveshare     July 10 2017
+ # The MPI3501 display is driven by the FBTFT kernel driver installed via
+ # goodtft/lcd-show (LCD35-show).  The kernel handles all SPI communication
+ # and creates a framebuffer device (/dev/fb0 or /dev/fb1).
  #
- # Permission is hereby granted, free of charge, to any person obtaining a copy
- # of this software and associated documnetation files (the "Software"), to deal
- # in the Software without restriction, including without limitation the rights
- # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- # copies of the Software, and to permit persons to  whom the Software is
- # furished to do so, subject to the following conditions:
+ # This file is kept for backward compatibility.  LCD_480x320.py and many
+ # payloads import LCD_Config for the dimension constants and legacy helpers.
  #
- # The above copyright notice and this permission notice shall be included in
- # all copies or substantial portions of the Software.
- #
- # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- # FITNESS OR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- # AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- # LIABILITY WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- # THE SOFTWARE.
- #
- 
-import spidev
-import RPi.GPIO as GPIO
+
 import time
 
-# Pin definition
-LCD_RST_PIN         = 27
-LCD_DC_PIN          = 25
-LCD_CS_PIN          = 8
-LCD_BL_PIN          = 24
+# ── Display geometry ──────────────────────────────────────────────────────
+LCD_WIDTH   = 480
+LCD_HEIGHT  = 320
 
-# SPI device, bus = 0, device = 0
-SPI = spidev.SpiDev(0, 0)
+# ── Pin definitions (for reference – the kernel driver handles these) ────
+# These are the standard MPI3501 / Waveshare 3.5" wiring.
+# They are NOT used in software – the FBTFT overlay configures them.
+LCD_RST_PIN = 25        # Reset
+LCD_DC_PIN  = 24        # Data / Command
+LCD_CS_PIN  = 8         # CE0 – display chip select
+LCD_BL_PIN  = 18        # Backlight (GPIO18 / PWM0 on MPI3501)
+
+# Touch controller is handled by the kernel (ads7846 / XPT2046 overlay)
+# The evdev interface is used in rj_input.py – no manual SPI needed.
+TOUCH_CS_PIN  = 7       # CE1 – touch chip select (kernel-managed)
+TOUCH_IRQ_PIN = 17      # Touch IRQ             (kernel-managed)
+
+# ── Legacy helpers ────────────────────────────────────────────────────────
+# These are no-ops so that existing callers (payloads etc.) don't break.
+# The FBTFT kernel driver owns the hardware – userspace doesn't touch it.
+
+GPIO = None
+SPI  = None
+
+try:
+    import RPi.GPIO as _GPIO
+    GPIO = _GPIO
+except Exception:
+    pass
+
 
 def epd_digital_write(pin, value):
-    GPIO.output(pin, value)
+    """No-op – kernel handles GPIO for the MPI3501."""
+    pass
+
 
 def Driver_Delay_ms(xms):
     time.sleep(xms / 1000.0)
 
+
 def SPI_Write_Byte(data):
-    SPI.writebytes(data)
+    """No-op – kernel handles SPI for the MPI3501."""
+    pass
+
 
 def GPIO_Init():
-    GPIO.setmode(GPIO.BCM)
-    GPIO.setwarnings(False)
-    GPIO.setup(LCD_RST_PIN, GPIO.OUT)
-    GPIO.setup(LCD_DC_PIN, GPIO.OUT)
-    GPIO.setup(LCD_CS_PIN, GPIO.OUT)
-    GPIO.setup(LCD_BL_PIN, GPIO.OUT)
-    SPI.max_speed_hz = 9000000
-    SPI.mode = 0b00
-    return 0;
+    """No-op – kernel handles GPIO for the MPI3501.
+    Returns 0 for backward compatibility with payloads that check the result.
+    """
+    return 0
 
 ### END OF FILE ###

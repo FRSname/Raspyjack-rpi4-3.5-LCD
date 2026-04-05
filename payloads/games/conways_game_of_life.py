@@ -23,7 +23,7 @@ from PIL import Image, ImageDraw, ImageFont  # type: ignore
 
 from payloads._input_helper import get_button
 
-WIDTH, HEIGHT = 128, 128
+WIDTH, HEIGHT = 480, 320
 FONT = ImageFont.load_default()
 
 PINS = {

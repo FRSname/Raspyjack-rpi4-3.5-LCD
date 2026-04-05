@@ -20,7 +20,7 @@ from PIL import Image, ImageDraw, ImageFont  # type: ignore
 # Shared input helper (WebUI virtual + GPIO)
 from payloads._input_helper import get_button
 
-WIDTH, HEIGHT = 128, 128
+WIDTH, HEIGHT = 480, 320
 KEY3 = 16
 REFRESH = 0.5
 

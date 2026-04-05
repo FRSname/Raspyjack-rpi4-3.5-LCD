@@ -101,7 +101,7 @@ for pin in (PIN_UP, PIN_DOWN, PIN_KEY3):
 LCD = LCD_1in44.LCD()
 LCD.LCD_Init(LCD_1in44.SCAN_DIR_DFT)
 
-WIDTH, HEIGHT = 128, 128
+WIDTH, HEIGHT = 480, 320
 font = ImageFont.load_default()
 
 # ==================================================

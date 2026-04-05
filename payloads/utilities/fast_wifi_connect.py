@@ -16,7 +16,7 @@ sys.path.append(os.path.abspath(os.path.join(__file__, "..", "..", "..")))
 
 LCD_OK = False
 LCD = None
-WIDTH, HEIGHT = 128, 128
+WIDTH, HEIGHT = 480, 320
 font = None
 
 

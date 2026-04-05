@@ -17,7 +17,7 @@ import LCD_1in44, LCD_Config
 from PIL import Image, ImageDraw, ImageFont
 
 # WebUI + GPIO input helper
-from payloads._input_helper import get_button
+from payloads._input_helper import get_button, safe_gpio_setup
 
 PINS = {
     "UP": 6,
@@ -30,13 +30,11 @@ PINS = {
     "KEY3": 16,
 }
 
-GPIO.setmode(GPIO.BCM)
-for pin in PINS.values():
-    GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+safe_gpio_setup(PINS, GPIO)
 
 LCD = LCD_1in44.LCD()
 LCD.LCD_Init(LCD_1in44.SCAN_DIR_DFT)
-WIDTH, HEIGHT = 128, 128
+WIDTH, HEIGHT = 480, 320
 font = ImageFont.load_default()
 
 

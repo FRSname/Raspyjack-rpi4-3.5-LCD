@@ -13,7 +13,7 @@ import threading, smbus, time, pyudev, serial, struct, json
 from subprocess import STDOUT, check_output
 from PIL import Image, ImageDraw, ImageFont, ImageColor, ImageSequence
 import LCD_Config
-import LCD_1in44
+import LCD_480x320
 import RPi.GPIO as GPIO
 import socket
 import ipaddress
@@ -196,11 +196,11 @@ start_time = time.time()
 ####### Classes except menu #######
 ### Global mostly static values ###
 class Defaults():
-    start_text = [12, 22]
-    text_gap = 14
+    start_text = [20, 45]
+    text_gap = 30
 
-    updown_center = 52
-    updown_pos = [15, updown_center, 88]
+    updown_center = 130
+    updown_pos = [40, updown_center, 260]
 
 
     imgstart_path = "/root/"
@@ -226,14 +226,14 @@ class template():
 
     # Render the border
     def DrawBorder(self):
-        draw.line([(127, 12), (127, 127)], fill=self.border, width=5)
-        draw.line([(127, 127), (0, 127)], fill=self.border, width=5)
-        draw.line([(0, 127), (0, 12)], fill=self.border, width=5)
-        draw.line([(0, 12), (128, 12)], fill=self.border, width=5)
+        draw.line([(479, 30), (479, 319)], fill=self.border, width=5)
+        draw.line([(479, 319), (0, 319)], fill=self.border, width=5)
+        draw.line([(0, 319), (0, 30)], fill=self.border, width=5)
+        draw.line([(0, 30), (480, 30)], fill=self.border, width=5)
 
     # Render inside of the border
     def DrawMenuBackground(self):
-        draw.rectangle((3, 14, 124, 124), fill=self.background)
+        draw.rectangle((3, 33, 476, 316), fill=self.background)
 
     # I don't know how to python pass 'class.variable' as reference properly
     def Set(self, index, color):
@@ -291,6 +291,23 @@ class template():
         self.gamepad_fill = dic["GAMEPAD_FILL"]
 
 ####### Simple methods #######
+
+# ---------------------------------------------------------------------------
+# GPIO button availability – MPI3501 has no physical joystick/buttons.
+# _read_pin() always returns 1 (not pressed) when GPIO buttons are absent,
+# so the code falls through to rj_input.get_virtual_button() (touch/WebUI).
+# ---------------------------------------------------------------------------
+_gpio_buttons_available = False
+
+def _read_pin(pin):
+    """Read a GPIO button pin.  Returns 1 (not pressed) when unavailable."""
+    if not _gpio_buttons_available:
+        return 1
+    try:
+        return GPIO.input(pin)
+    except Exception:
+        return 1
+
 ### Get any button press ###
 def getButton():
     global _last_button, _last_button_time, _button_down_since
@@ -311,7 +328,7 @@ def getButton():
             return v
         pressed = None
         for item in PINS:
-            if GPIO.input(PINS[item]) == 0:
+            if _read_pin(PINS[item]) == 0:
                 pressed = item
                 break
         if pressed is None:
@@ -464,7 +481,7 @@ def _handle_main_menu_key3_double_click() -> bool:
     key3_released = False
     while time.monotonic() < deadline:
         try:
-            if GPIO.input(PINS["KEY3_PIN"]) != 0:
+            if _read_pin(PINS["KEY3_PIN"]) != 0:
                 key3_released = True
             elif key3_released:
                 _mark_user_activity()
@@ -534,7 +551,7 @@ def _wait_for_button_release(timeout: float = 1.0) -> None:
     deadline = time.monotonic() + max(0.0, timeout)
     while time.monotonic() < deadline:
         try:
-            if all(GPIO.input(pin) != 0 for pin in PINS.values()):
+            if all(_read_pin(pin) != 0 for pin in PINS.values()):
                 return
         except Exception:
             return
@@ -608,10 +625,10 @@ def LoadConfig():
 
 def _draw_toolbar():
     try:
-        draw.line([(0, 4), (128, 4)], fill="#222", width=10)
-        draw.text((0, 0), f"{_temp_c:.0f} °C ", fill="WHITE", font=font)
+        draw.line([(0, 10), (480, 10)], fill="#222", width=24)
+        draw.text((4, 2), f"{_temp_c:.0f} °C ", fill="WHITE", font=font)
         if _status_text:
-            draw.text((30, 0), _status_text, fill="WHITE", font=font)
+            draw.text((100, 2), _status_text, fill="WHITE", font=font)
     except Exception:
         pass
 
@@ -710,31 +727,31 @@ def _draw_lock_screen(title: str, prompt: str, entered: list[str] | None = None,
     selected_row, selected_col = selection
     try:
         draw_lock.acquire()
-        draw.rectangle((0, 0, 127, 127), fill=color.background)
+        draw.rectangle((0, 0, 479, 319), fill=color.background)
         _draw_toolbar()
         color.DrawBorder()
-        draw.text((8, 16), _truncate_to_width(title, 110, text_font), fill=color.selected_text, font=text_font)
-        draw.text((8, 28), _truncate_to_width(prompt, 110, font), fill=color.text, font=font)
+        draw.text((20, 40), _truncate_to_width(title, 420, text_font), fill=color.selected_text, font=text_font)
+        draw.text((20, 68), _truncate_to_width(prompt, 420, font), fill=color.text, font=font)
 
         for index in range(4):
-            x0 = 10 + (index * 28)
-            y0 = 42
-            x1 = x0 + 20
-            y1 = 58
+            x0 = 30 + (index * 70)
+            y0 = 100
+            x1 = x0 + 55
+            y1 = 130
             filled = index < len(entered)
             box_fill = color.select if filled else color.background
             box_text = "*" if filled else "-"
             draw.rectangle((x0, y0, x1, y1), outline=color.border, fill=box_fill)
-            _draw_centered_text((x0, y0 + 1, x1, y1), box_text, fill=color.selected_text if filled else color.text, font=text_font)
+            _draw_centered_text((x0, y0 + 2, x1, y1), box_text, fill=color.selected_text if filled else color.text, font=text_font)
 
-        start_x = 10
-        start_y = 66
-        cell_w = 34
-        cell_h = 14
+        start_x = 30
+        start_y = 150
+        cell_w = 100
+        cell_h = 36
         for row_index, row in enumerate(keypad):
             for col_index, key in enumerate(row):
-                x0 = start_x + (col_index * 36)
-                y0 = start_y + (row_index * 14)
+                x0 = start_x + (col_index * 110)
+                y0 = start_y + (row_index * 38)
                 x1 = x0 + cell_w
                 y1 = y0 + cell_h
                 is_selected = row_index == selected_row and col_index == selected_col
@@ -750,14 +767,14 @@ def _draw_lock_screen(title: str, prompt: str, entered: list[str] | None = None,
 def _show_lock_wake_screen(reason: str = "Locked") -> None:
     try:
         draw_lock.acquire()
-        draw.rectangle((0, 0, 127, 127), fill=color.background)
+        draw.rectangle((0, 0, 479, 319), fill=color.background)
         _draw_toolbar()
         color.DrawBorder()
         lock_icon = MENU_ICONS.get(" Lock", "\uf023")
-        lock_icon_font = ImageFont.truetype('/usr/share/fonts/truetype/fontawesome/fa-solid-900.ttf', 28)
-        draw.text((64, 34), lock_icon, font=lock_icon_font, fill=color.selected_text, anchor="mm")
-        _draw_centered_text((8, 46, 120, 78), reason, fill=color.selected_text, font=text_font)
-        _draw_centered_text((8, 82, 120, 110), "Press a key", fill=color.text, font=text_font)
+        lock_icon_font = ImageFont.truetype('/usr/share/fonts/truetype/fontawesome/fa-solid-900.ttf', 64)
+        draw.text((240, 100), lock_icon, font=lock_icon_font, fill=color.selected_text, anchor="mm")
+        _draw_centered_text((20, 130, 460, 200), reason, fill=color.selected_text, font=text_font)
+        _draw_centered_text((20, 210, 460, 280), "Press a key", fill=color.text, font=text_font)
     finally:
         draw_lock.release()
 
@@ -767,8 +784,8 @@ def _draw_lock_screensaver_frame(frame: Image.Image) -> None:
         draw_lock.acquire()
         image.paste(frame)
         lock_icon = MENU_ICONS.get(" Lock", "\uf023")
-        lock_icon_font = ImageFont.truetype('/usr/share/fonts/truetype/fontawesome/fa-solid-900.ttf', 14)
-        draw.text((120, 2), lock_icon, fill=color.selected_text, font=lock_icon_font, anchor="ra")
+        lock_icon_font = ImageFont.truetype('/usr/share/fonts/truetype/fontawesome/fa-solid-900.ttf', 28)
+        draw.text((460, 4), lock_icon, fill=color.selected_text, font=lock_icon_font, anchor="ra")
     finally:
         draw_lock.release()
 
@@ -780,7 +797,7 @@ def _get_fresh_lock_button() -> str | None:
         return virtual_button
     try:
         for item in PINS:
-            if GPIO.input(PINS[item]) == 0:
+            if _read_pin(PINS[item]) == 0:
                 _mark_user_activity()
                 return item
     except Exception:
@@ -1064,11 +1081,11 @@ def Dialog(a, wait=True):
     try:
         draw_lock.acquire()
         _draw_toolbar()
-        draw.rectangle([7, 35, 120, 95], fill="#ADADAD")
-        _draw_centered_text((7, 35, 120, 63), a, fill="#000000", font=text_font)
-        draw.rectangle([45, 65, 70, 80], fill="#FF0000")
+        draw.rectangle([20, 80, 460, 240], fill="#ADADAD")
+        _draw_centered_text((20, 80, 460, 160), a, fill="#000000", font=text_font)
+        draw.rectangle([170, 165, 310, 210], fill="#FF0000")
 
-        _draw_centered_text((45, 65, 70, 80), "OK", fill=color.selected_text, font=text_font)
+        _draw_centered_text((170, 165, 310, 210), "OK", fill=color.selected_text, font=text_font)
     finally:
         draw_lock.release()
     if wait:
@@ -1079,12 +1096,12 @@ def Dialog_result(title, detail="", wait=True):
     try:
         draw_lock.acquire()
         _draw_toolbar()
-        draw.rectangle([7, 25, 120, 102], fill="#ADADAD")
-        _draw_centered_text((10, 30, 117, 53), title, fill="#000000", font=text_font)
+        draw.rectangle([20, 60, 460, 260], fill="#ADADAD")
+        _draw_centered_text((30, 70, 450, 130), title, fill="#000000", font=text_font)
         if detail:
-            _draw_centered_text((10, 52, 117, 77), detail, fill="#000000", font=text_font)
-        draw.rectangle([43, 82, 83, 96], fill="#FF0000")
-        _draw_centered_text((43, 82, 83, 96), "OK", fill=color.selected_text, font=text_font)
+            _draw_centered_text((30, 130, 450, 200), detail, fill="#000000", font=text_font)
+        draw.rectangle([160, 210, 320, 250], fill="#FF0000")
+        _draw_centered_text((160, 210, 320, 250), "OK", fill=color.selected_text, font=text_font)
     finally:
         draw_lock.release()
     if wait:
@@ -1095,8 +1112,8 @@ def Dialog_info(a, wait=True, timeout=None):
     try:
         draw_lock.acquire()
         _draw_toolbar()
-        draw.rectangle([3, 14, 124, 124], fill="#00A321")
-        _draw_centered_text((3, 14, 124, 124), a, fill="#000000", font=text_font)
+        draw.rectangle([3, 33, 476, 316], fill="#00A321")
+        _draw_centered_text((3, 33, 476, 316), a, fill="#000000", font=text_font)
     finally:
         draw_lock.release()
     if not wait and timeout:
@@ -1105,11 +1122,11 @@ def Dialog_info(a, wait=True, timeout=None):
             try:
                 draw_lock.acquire()
                 _draw_toolbar()
-                draw.rectangle([3, 14, 124, 124], fill="#00A321")
-                _draw_centered_text((3, 14, 124, 124), a, fill="#000000", font=text_font)
+                draw.rectangle([3, 33, 476, 316], fill="#00A321")
+                _draw_centered_text((3, 33, 476, 316), a, fill="#000000", font=text_font)
                 # Progress bar at bottom
                 pct = min(1.0, (time.time() - start) / timeout)
-                bar_x0, bar_y0, bar_x1, bar_y1 = 10, 110, 118, 118
+                bar_x0, bar_y0, bar_x1, bar_y1 = 30, 280, 450, 310
                 draw.rectangle([bar_x0, bar_y0, bar_x1, bar_y1], outline="#004d12", fill="#00A321")
                 fill_w = int((bar_x1 - bar_x0) * pct)
                 draw.rectangle([bar_x0, bar_y0, bar_x0 + fill_w, bar_y1], fill="#004d12")
@@ -1123,10 +1140,10 @@ def YNDialog(a="Are you sure?", y="Yes", n="No",b=""):
     try:
         draw_lock.acquire()
         _draw_toolbar()
-        draw.rectangle([7, 35, 120, 95], fill="#ADADAD")
-        _draw_centered_text((7, 35, 120, 52), a, fill="#000000", font=text_font)
+        draw.rectangle([20, 80, 460, 240], fill="#ADADAD")
+        _draw_centered_text((20, 80, 460, 130), a, fill="#000000", font=text_font)
         if b:
-            _draw_centered_text((7, 50, 120, 65), b, fill="#000000", font=text_font)
+            _draw_centered_text((20, 125, 460, 165), b, fill="#000000", font=text_font)
     finally:
         draw_lock.release()
     time.sleep(0.25)
@@ -1140,16 +1157,16 @@ def YNDialog(a="Are you sure?", y="Yes", n="No",b=""):
             if answer:
                 render_bg_color = "#FF0000"
                 render_color = color.selected_text
-            draw.rectangle([15, 65, 45, 80], fill=render_bg_color)
-            draw.text((20, 68), y, fill=render_color)
+            draw.rectangle([60, 165, 180, 210], fill=render_bg_color)
+            draw.text((85, 172), y, fill=render_color)
 
             render_color = "#000000"
             render_bg_color = "#ADADAD"
             if not answer:
                 render_bg_color = "#FF0000"
                 render_color = color.selected_text
-            draw.rectangle([76, 65, 106, 80], fill=render_bg_color)
-            draw.text((86, 68), n, fill=render_color)
+            draw.rectangle([300, 165, 420, 210], fill=render_bg_color)
+            draw.text((335, 172), n, fill=render_color)
         finally:
             draw_lock.release()
 
@@ -1210,7 +1227,7 @@ def ShowLines(arr,bold=[]):
                 render_text = m.char + render_text
                 render_color = color.selected_text
                 draw.rectangle([(default.start_text[0]-5, default.start_text[1] + default.text_gap * i),
-                                (120, default.start_text[1] + default.text_gap * i + 10)], fill=color.select)
+                                (460, default.start_text[1] + default.text_gap * i + 24)], fill=color.select)
             # Draw icons on main menu when available
             if m.which == "a":
                 icon = MENU_ICONS.get(render_text, "")
@@ -1221,10 +1238,10 @@ def ShowLines(arr,bold=[]):
                         font=icon_font,
                         fill=render_color
                     )
-                    max_w = 120 - (default.start_text[0] + 12)
+                    max_w = 460 - (default.start_text[0] + 30)
                     text = _truncate_to_width(render_text, max_w, text_font)
                     draw.text(
-                        (default.start_text[0] + 12, default.start_text[1] + default.text_gap * i),
+                        (default.start_text[0] + 30, default.start_text[1] + default.text_gap * i),
                         text,
                         font=text_font,
                         fill=render_color
@@ -1246,7 +1263,7 @@ def RenderMenuWindowOnce(inlist, selected_index=0):
     Render a non-interactive menu window with a selected item highlighted.
     Keeps the selected index visible without shifting the list unexpectedly.
     """
-    WINDOW = 7
+    WINDOW = 8
     if not inlist:
         inlist = ["Nothing here :(   "]
         selected_index = 0
@@ -1270,8 +1287,8 @@ def RenderMenuWindowOnce(inlist, selected_index=0):
                 draw.rectangle(
                     (default.start_text[0] - 5,
                      default.start_text[1] + default.text_gap * i,
-                     120,
-                     default.start_text[1] + default.text_gap * i + 10),
+                     460,
+                     default.start_text[1] + default.text_gap * i + 24),
                     fill=color.select
                 )
             # Draw Font Awesome icon if available (only on main menu)
@@ -1285,10 +1302,10 @@ def RenderMenuWindowOnce(inlist, selected_index=0):
                         font=icon_font,
                         fill=fill
                     )
-                    max_w = 120 - (default.start_text[0] + 12)
+                    max_w = 460 - (default.start_text[0] + 30)
                     line = _truncate_to_width(txt, max_w, text_font)
                     draw.text(
-                        (default.start_text[0] + 12,
+                        (default.start_text[0] + 30,
                          default.start_text[1] + default.text_gap * i),
                         line,
                         font=text_font,
@@ -1302,7 +1319,7 @@ def RenderMenuWindowOnce(inlist, selected_index=0):
                         fill=fill
                     )
             else:
-                max_w = 120 - default.start_text[0]
+                max_w = 460 - default.start_text[0]
                 line = _truncate_to_width(txt, max_w, text_font)
                 draw.text(
                     (default.start_text[0],
@@ -1329,28 +1346,28 @@ def RenderMenuCarouselOnce(inlist, selected_index=0):
         color.DrawMenuBackground()
 
         current_item = inlist[index]
-        main_x = 64
-        main_y = 64
+        main_x = 240
+        main_y = 160
 
         icon = MENU_ICONS.get(current_item, "\uf192")
-        huge_icon_font = ImageFont.truetype('/usr/share/fonts/truetype/fontawesome/fa-solid-900.ttf', 48)
-        draw.text((main_x, main_y - 12), icon, font=huge_icon_font, fill=color.selected_text, anchor="mm")
+        huge_icon_font = ImageFont.truetype('/usr/share/fonts/truetype/fontawesome/fa-solid-900.ttf', 96)
+        draw.text((main_x, main_y - 20), icon, font=huge_icon_font, fill=color.selected_text, anchor="mm")
 
         title = current_item.strip()
-        carousel_text_font = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', 12)
-        draw.text((main_x, main_y + 28), title, font=carousel_text_font, fill=color.selected_text, anchor="mm")
+        carousel_text_font = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', 24)
+        draw.text((main_x, main_y + 60), title, font=carousel_text_font, fill=color.selected_text, anchor="mm")
 
         if total > 1:
-            arrow_font = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', 18)
-            draw.text((20, main_y), "◀", font=arrow_font, fill=color.text, anchor="mm")
-            draw.text((108, main_y), "▶", font=arrow_font, fill=color.text, anchor="mm")
+            arrow_font = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', 36)
+            draw.text((50, main_y), "◀", font=arrow_font, fill=color.text, anchor="mm")
+            draw.text((430, main_y), "▶", font=arrow_font, fill=color.text, anchor="mm")
     finally:
         draw_lock.release()
 
 
 def RenderMenuGridOnce(inlist, selected_index=0):
     """Render a non-interactive snapshot of the grid view."""
-    GRID_COLS = 2
+    GRID_COLS = 3
     GRID_ROWS = 4
     GRID_ITEMS = GRID_COLS * GRID_ROWS
 
@@ -1370,24 +1387,24 @@ def RenderMenuGridOnce(inlist, selected_index=0):
         for i, item in enumerate(window):
             row = i // GRID_COLS
             col = i % GRID_COLS
-            x = default.start_text[0] + (col * 55)
-            y = default.start_text[1] + (row * 25)
+            x = default.start_text[0] + (col * 150)
+            y = default.start_text[1] + (row * 65)
             is_selected = (start_idx + i == index)
 
             if is_selected:
-                draw.rectangle((x - 2, y - 2, x + 53, y + 23), fill=color.select)
+                draw.rectangle((x - 2, y - 2, x + 140, y + 58), fill=color.select)
                 fill_color = color.selected_text
             else:
                 fill_color = color.text
 
             icon = MENU_ICONS.get(item, "")
             if icon:
-                draw.text((x + 2, y), icon, font=icon_font, fill=fill_color)
-                short_text = item.strip()[:8]
-                draw.text((x, y + 13), short_text, font=text_font, fill=fill_color)
+                draw.text((x + 4, y + 2), icon, font=icon_font, fill=fill_color)
+                short_text = item.strip()[:14]
+                draw.text((x, y + 30), short_text, font=text_font, fill=fill_color)
             else:
-                short_text = item.strip()[:10]
-                draw.text((x, y + 8), short_text, font=text_font, fill=fill_color)
+                short_text = item.strip()[:14]
+                draw.text((x, y + 16), short_text, font=text_font, fill=fill_color)
     finally:
         draw_lock.release()
 
@@ -1413,7 +1430,7 @@ def GetMenuString(inlist, duplicates=False):
     - Si duplicates=True : retourne (index, valeur) ; sinon retourne valeur.
     - Si la liste est vide : affiche un placeholder et retourne "".
     """
-    WINDOW      = 7                 # lignes visibles simultanément
+    WINDOW      = 8                 # lignes visibles simultanément
     CURSOR_MARK = m.char            # '> '
     empty       = False
 
@@ -1451,8 +1468,8 @@ def GetMenuString(inlist, duplicates=False):
                     draw.rectangle(
                         (default.start_text[0] - 5,
                          default.start_text[1] + default.text_gap * i,
-                         120,
-                         default.start_text[1] + default.text_gap * i + 10),
+                         460,
+                         default.start_text[1] + default.text_gap * i + 24),
                         fill=color.select
                     )
 
@@ -1468,10 +1485,10 @@ def GetMenuString(inlist, duplicates=False):
                             fill=fill
                         )
                         # Draw text with offset for icon
-                        max_w = 120 - (default.start_text[0] + 12)
+                        max_w = 460 - (default.start_text[0] + 30)
                         line = _truncate_to_width(line, max_w, text_font)
                         draw.text(
-                            (default.start_text[0] + 12,
+                            (default.start_text[0] + 30,
                              default.start_text[1] + default.text_gap * i),
                             line,
                             font=text_font,
@@ -1479,7 +1496,7 @@ def GetMenuString(inlist, duplicates=False):
                         )
                     else:
                         # Draw text normally if no icon
-                        max_w = 120 - default.start_text[0]
+                        max_w = 460 - default.start_text[0]
                         line = _truncate_to_width(line, max_w, text_font)
                         draw.text(
                             (default.start_text[0],
@@ -1490,7 +1507,7 @@ def GetMenuString(inlist, duplicates=False):
                         )
                 else:
                     # Submenus: no icons, just text
-                    max_w = 120 - default.start_text[0]
+                    max_w = 460 - default.start_text[0]
                     line = _truncate_to_width(line, max_w, text_font)
                     draw.text(
                         (default.start_text[0],
@@ -1539,13 +1556,13 @@ def GetMenuString(inlist, duplicates=False):
 ### Draw up down triangles ###
 color = template()
 def DrawUpDown(value, offset=0, up=False,down=False, render_color=color.text):
-    draw.polygon([(offset, 53), (10 + offset, 35), (20+offset, 53)],
+    draw.polygon([(offset, 135), (25 + offset, 90), (50+offset, 135)],
         outline=color.gamepad, fill=(color.background, color.gamepad_fill)[up])
-    draw.polygon([(10+offset, 93), (20+offset, 75), (offset, 75)],
+    draw.polygon([(25+offset, 235), (50+offset, 190), (offset, 190)],
         outline=color.gamepad, fill=(color.background, color.gamepad_fill)[down])
 
-    draw.rectangle([( offset + 2, 60),(offset+30, 70)], fill=color.background)
-    draw.text((offset + 2, 60), str(value) , fill=render_color)
+    draw.rectangle([( offset + 5, 150),(offset+80, 180)], fill=color.background)
+    draw.text((offset + 5, 150), str(value) , fill=render_color)
 
 
 ### Screen for selecting RGB color ###
@@ -1556,13 +1573,13 @@ def GetColor(final_color="#000000"):
     render_offset = default.updown_pos
     desired_color = list(int(final_color[i:i+2], 16) for i in (1, 3, 5))
 
-    while GPIO.input(PINS["KEY_PRESS_PIN"]):
+    while _read_pin(PINS["KEY_PRESS_PIN"]):
         render_up = False
         render_down = False
         final_color='#%02x%02x%02x' % (desired_color[0],desired_color[1],desired_color[2])
 
-        draw.rectangle([(default.start_text[0]-5, 1+ default.start_text[1] + default.text_gap * 0),(120, default.start_text[1] + default.text_gap * 0 + 10)], fill=final_color)
-        draw.rectangle([(default.start_text[0]-5, 3+ default.start_text[1] + default.text_gap * 6),(120, default.start_text[1] + default.text_gap * 6 + 12)], fill=final_color)
+        draw.rectangle([(default.start_text[0]-5, 1+ default.start_text[1] + default.text_gap * 0),(460, default.start_text[1] + default.text_gap * 0 + 24)], fill=final_color)
+        draw.rectangle([(default.start_text[0]-5, 3+ default.start_text[1] + default.text_gap * 6),(460, default.start_text[1] + default.text_gap * 6 + 28)], fill=final_color)
 
         DrawUpDown(desired_color[0],render_offset[0],render_up,render_down,(color.text, color.selected_text)[i_rgb == 0])
         DrawUpDown(desired_color[1],render_offset[1],render_up,render_down,(color.text, color.selected_text)[i_rgb == 1])
@@ -1620,13 +1637,13 @@ def GetIpValue(prefix):
     render_offset = default.updown_pos
     color.DrawMenuBackground()
     time.sleep(0.4)
-    while GPIO.input(PINS["KEY_PRESS_PIN"]):
+    while _read_pin(PINS["KEY_PRESS_PIN"]):
         render_up = False
         render_down = False
 
-        draw.rectangle([(default.start_text[0]-5, 1+ default.start_text[1] + default.text_gap * 0),(120, default.start_text[1] + default.text_gap * 5)], fill=color.background)
+        draw.rectangle([(default.start_text[0]-5, 1+ default.start_text[1] + default.text_gap * 0),(460, default.start_text[1] + default.text_gap * 5)], fill=color.background)
         DrawUpDown(value,render_offset[2],render_up,render_down,color.selected_text)
-        draw.text(( 5,60), f"IP:{prefix}.", fill=color.selected_text)
+        draw.text(( 15,155), f"IP:{prefix}.", fill=color.selected_text)
 
         button = getButton()
         if button == "KEY_UP_PIN":
@@ -1654,91 +1671,77 @@ def GetIpValue(prefix):
 def Gamepad():
     color.DrawMenuBackground()
     time.sleep(0.5)
-    draw.rectangle((25, 55, 45, 73), outline=color.gamepad,
+    draw.rectangle((80, 140, 160, 185), outline=color.gamepad,
                    fill=color.background)
-    draw.text((28, 59), "<<<", fill=color.gamepad)
+    draw.text((88, 150), "<<<", fill=color.gamepad)
     m.which = m.which + "1"
     # Don't render if you dont need to => less flickering
     lastimg = [0, 0, 0, 0, 0, 0, 0]
-    while GPIO.input(PINS["KEY_PRESS_PIN"]):
+    _vflash = {}                # track virtual-button press times
+    _FLASH = 0.25               # seconds a touch "press" stays lit
+
+    # Button list in drawing order (name, index)
+    _btn_order = [
+        "KEY_UP_PIN", "KEY_LEFT_PIN", "KEY_RIGHT_PIN", "KEY_DOWN_PIN",
+        "KEY1_PIN", "KEY2_PIN", "KEY3_PIN",
+    ]
+    _btn_label = {
+        "KEY_UP_PIN": "UP", "KEY_LEFT_PIN": "LEFT",
+        "KEY_RIGHT_PIN": "RIGHT", "KEY_DOWN_PIN": "DOWN",
+        "KEY1_PIN": "Q", "KEY2_PIN": "E", "KEY3_PIN": "R",
+    }
+
+    while True:
+        # --- exit check (physical OK or touch OK) -------------------------
+        if _read_pin(PINS["KEY_PRESS_PIN"]) == 0:
+            break
+        vbtn = rj_input.get_virtual_button()
+        if vbtn == "KEY_PRESS_PIN":
+            break
+        if vbtn:
+            _vflash[vbtn] = time.monotonic()
+
+        now_gp = time.monotonic()
         write = ""
         x = 0
-        ######
-        render_color = color.background
-        i = GPIO.input(PINS["KEY_UP_PIN"])
-        if i == 0:
-            render_color = color.gamepad_fill
-            write = write + " UP"
-        if i != lastimg[x] or i == 0:
-            draw.polygon([(25, 53), (35, 35), (45, 53)],
-                         outline=color.gamepad, fill=render_color)
-        lastimg[x] = i
-        x += 1
-        ######
-        render_color = color.background
-        i = GPIO.input(PINS["KEY_LEFT_PIN"])
-        if i == 0:
-            render_color = color.gamepad_fill
-            write = write + " LEFT"
-        if i != lastimg[x] or i == 0:
-            draw.polygon([(5, 63), (23, 54), (23, 74)],
-                         outline=color.gamepad, fill=render_color)
-        lastimg[x] = i
-        x += 1
-        ######
-        render_color = color.background
-        i = GPIO.input(PINS["KEY_RIGHT_PIN"])
-        if i == 0:
-            render_color = color.gamepad_fill
-            write = write + " RIGHT"
-        if i != lastimg[x] or i == 0:
-            draw.polygon([(65, 63), (47, 54), (47, 74)],
-                         outline=color.gamepad, fill=render_color)
-        lastimg[x] = i
-        x += 1
-        ######
-        render_color = color.background
-        i = GPIO.input(PINS["KEY_DOWN_PIN"])
-        if i == 0:
-            render_color = color.gamepad_fill
-            write = write + " DOWN"
-        if i != lastimg[x] or i == 0:
-            draw.polygon([(35, 93), (45, 75), (25, 75)],
-                         outline=color.gamepad, fill=render_color)
-        lastimg[x] = i
-        x += 1
-        ######
-        render_color = color.background
-        i = GPIO.input(PINS["KEY1_PIN"])
-        if i == 0:
-            render_color = color.gamepad_fill
-            write = write + " Q"
-        if i != lastimg[x] or i == 0:
-            draw.ellipse((70, 33, 90, 53), outline=color.gamepad,
-                         fill=render_color)
-        lastimg[x] = i
-        x += 1
-        ######
-        render_color = color.background
-        i = GPIO.input(PINS["KEY2_PIN"])
-        if i == 0:
-            render_color = color.gamepad_fill
-            write = write + " E"
-        if i != lastimg[x] or i == 0:
-            draw.ellipse((100, 53, 120, 73),
-                         outline=color.gamepad, fill=render_color)
-        lastimg[x] = i
-        x += 1
-        ######
-        render_color = color.background
-        i = GPIO.input(PINS["KEY3_PIN"])
-        if i == 0:
-            render_color = color.gamepad_fill
-            write = write + " R"
-        if i != lastimg[x] or i == 0:
-            draw.ellipse((70, 73, 90, 93), outline=color.gamepad,
-                         fill=render_color)
-        lastimg[x] = i
+
+        for btn_name in _btn_order:
+            # pressed if GPIO low OR recent virtual touch
+            gpio_pressed = (_read_pin(PINS[btn_name]) == 0)
+            virt_pressed = (now_gp - _vflash.get(btn_name, 0)) < _FLASH
+            i = 0 if (gpio_pressed or virt_pressed) else 1
+
+            if i == 0:
+                render_color = color.gamepad_fill
+                write = write + " " + _btn_label[btn_name]
+            else:
+                render_color = color.background
+
+            # Only redraw shapes that changed (or are pressed)
+            if i != lastimg[x] or i == 0:
+                if btn_name == "KEY_UP_PIN":
+                    draw.polygon([(80, 135), (120, 90), (160, 135)],
+                                 outline=color.gamepad, fill=render_color)
+                elif btn_name == "KEY_LEFT_PIN":
+                    draw.polygon([(15, 160), (70, 138), (70, 185)],
+                                 outline=color.gamepad, fill=render_color)
+                elif btn_name == "KEY_RIGHT_PIN":
+                    draw.polygon([(225, 160), (170, 138), (170, 185)],
+                                 outline=color.gamepad, fill=render_color)
+                elif btn_name == "KEY_DOWN_PIN":
+                    draw.polygon([(120, 235), (160, 190), (80, 190)],
+                                 outline=color.gamepad, fill=render_color)
+                elif btn_name == "KEY1_PIN":
+                    draw.ellipse((260, 85, 340, 135), outline=color.gamepad,
+                                 fill=render_color)
+                elif btn_name == "KEY2_PIN":
+                    draw.ellipse((380, 135, 460, 185),
+                                 outline=color.gamepad, fill=render_color)
+                elif btn_name == "KEY3_PIN":
+                    draw.ellipse((260, 185, 340, 235), outline=color.gamepad,
+                                 fill=render_color)
+            lastimg[x] = i
+            x += 1
 
         if write != "":
             render_chars = ""
@@ -1746,6 +1749,8 @@ def Gamepad():
                 render_chars += "press(\"" + item + "\");"
             print(os.popen("P4wnP1_cli hid job -t 5 -c '" + render_chars + "'").read())
             time.sleep(0.25)
+        else:
+            time.sleep(0.02)  # ~50 Hz idle poll
     m.which = m.which[:-1]
     time.sleep(0.25)
 
@@ -1950,8 +1955,8 @@ def ShowInfo():
 
 def DisplayScrollableInfo(info_lines, refresh_fn=None, refresh_interval=2.0):
     """Display scrollable text information - simple and working."""
-    WINDOW = 7  # lines visible simultaneously
-    max_width = 120 - default.start_text[0]
+    WINDOW = 8  # lines visible simultaneously
+    max_width = 460 - default.start_text[0]
 
     def _build_display_lines(lines):
         display = []
@@ -2003,8 +2008,8 @@ def DisplayScrollableInfo(info_lines, refresh_fn=None, refresh_interval=2.0):
                     draw.rectangle(
                         (default.start_text[0] - 5,
                          default.start_text[1] + default.text_gap * i,
-                         120,
-                         default.start_text[1] + default.text_gap * i + 10),
+                         460,
+                         default.start_text[1] + default.text_gap * i + 24),
                         fill=color.select
                     )
 
@@ -2215,7 +2220,7 @@ def ImageExplorer() -> None:
             if YNDialog("Open?", "Yes", "No", output[:10]):
                 full_img = os.path.join(path, output)
                 with Image.open(full_img) as img:
-                    image.paste(img.resize((128, 128)))
+                    image.paste(img.resize((480, 320)))
                 time.sleep(1)
                 getButton()
                 color.DrawBorder()
@@ -3104,15 +3109,21 @@ def _setup_gpio() -> None:
     (which most likely called ``GPIO.cleanup()`` on exit) and create a *fresh*
     LCD driver instance so that the display can be used again.
     """
+    global _gpio_buttons_available
     # --- GPIO -------------------------------------------------------------
     GPIO.setmode(GPIO.BCM)
-    for pin in PINS.values():                     # all buttons back to inputs
-        GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+    _gpio_buttons_available = False
+    try:
+        for pin in PINS.values():                 # all buttons back to inputs
+            GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+        _gpio_buttons_available = True
+    except Exception:
+        print("[GPIO] Physical button pins not available – touch-only mode")
 
     # --- LCD --------------------------------------------------------------
     global LCD, image, draw                      # replace the old objects
-    LCD = LCD_1in44.LCD()
-    LCD.LCD_Init(LCD_1in44.SCAN_DIR_DFT)
+    LCD = LCD_480x320.LCD()
+    LCD.LCD_Init(LCD_480x320.SCAN_DIR_DFT)
     image = Image.new("RGB", (LCD.width, LCD.height), "BLACK")
     draw  = ImageDraw.Draw(image)
 
@@ -3151,6 +3162,12 @@ def exec_payload(filename: str, *args) -> None:
     _write_payload_state(True, filename)
     screen_lock.set()                # stop _stats_loop & _display_loop
     LCD.LCD_Clear()                  # give the payload a clean canvas
+
+    # Release the touch device so the payload subprocess can grab it
+    try:
+        rj_input.stop_listener()
+    except Exception:
+        pass
 
     log = open(default.payload_log, "ab", buffering=0)
     try:
@@ -3205,7 +3222,7 @@ def exec_payload(filename: str, *args) -> None:
 
     # small debounce: 300 ms max
     t0 = time.time()
-    while any(GPIO.input(p) == 0 for p in PINS.values()) and time.time() - t0 < .3:
+    while any(_read_pin(p) == 0 for p in PINS.values()) and time.time() - t0 < .3:
         time.sleep(.03)
 
     screen_lock.clear()                            # threads can run again
@@ -3217,7 +3234,7 @@ class DisposableMenu:
     which  = "a"     # Start menu
     select = 0       # Current selection index
     char   = "> "    # Indentation character
-    max_len = 17     # Max chars per line
+    max_len = 45     # Max chars per line
     view_mode = "list"  # "list", "grid", or "carousel" - current view mode
 
     menu = {
@@ -3514,28 +3531,28 @@ def GetMenuCarousel(inlist, duplicates=False):
             txt = current_item if not duplicates else current_item.split('#', 1)[1]
 
             # Main item display area (center)
-            main_x = 64  # Center of 128px screen
-            main_y = 64  # Center vertically
+            main_x = 240  # Center of 480px screen
+            main_y = 160  # Center vertically
 
             # Draw huge icon in center
             icon = MENU_ICONS.get(txt, "\uf192")  # Default to dot-circle icon
             # Large font for the icon
-            huge_icon_font = ImageFont.truetype('/usr/share/fonts/truetype/fontawesome/fa-solid-900.ttf', 48)
-            draw.text((main_x, main_y - 12), icon, font=huge_icon_font, fill=color.selected_text, anchor="mm")
+            huge_icon_font = ImageFont.truetype('/usr/share/fonts/truetype/fontawesome/fa-solid-900.ttf', 96)
+            draw.text((main_x, main_y - 20), icon, font=huge_icon_font, fill=color.selected_text, anchor="mm")
 
             # Draw menu item name under the icon with custom font for carousel view
             title = txt.strip()
             # Create a bigger, bolder font specifically for carousel view
-            carousel_text_font = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', 12)
-            draw.text((main_x, main_y + 28), title, font=carousel_text_font, fill=color.selected_text, anchor="mm")
+            carousel_text_font = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', 24)
+            draw.text((main_x, main_y + 60), title, font=carousel_text_font, fill=color.selected_text, anchor="mm")
 
             # Draw navigation arrows - always show if there are multiple items
             if total > 1:
-                arrow_font = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', 18)
+                arrow_font = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', 36)
                 # Left arrow (always show for wraparound)
-                draw.text((20, main_y), "◀", font=arrow_font, fill=color.text, anchor="mm")
+                draw.text((50, main_y), "◀", font=arrow_font, fill=color.text, anchor="mm")
                 # Right arrow (always show for wraparound)
-                draw.text((108, main_y), "▶", font=arrow_font, fill=color.text, anchor="mm")
+                draw.text((430, main_y), "▶", font=arrow_font, fill=color.text, anchor="mm")
         finally:
             draw_lock.release()
 
@@ -3575,7 +3592,7 @@ def GetMenuGrid(inlist, duplicates=False):
     - Grid navigation: UP/DOWN/LEFT/RIGHT
     - Returns selected item or empty string
     """
-    GRID_COLS = 2
+    GRID_COLS = 3
     GRID_ROWS = 4
     GRID_ITEMS = GRID_COLS * GRID_ROWS
 
@@ -3608,8 +3625,8 @@ def GetMenuGrid(inlist, duplicates=False):
                 col = i % GRID_COLS
 
                 # Grid item position
-                x = default.start_text[0] + (col * 55)  # 55px per column
-                y = default.start_text[1] + (row * 25)  # 25px per row
+                x = default.start_text[0] + (col * 150)  # 150px per column
+                y = default.start_text[1] + (row * 65)   # 65px per row
 
                 # Check if this item is selected
                 is_selected = (start_idx + i == index)
@@ -3617,7 +3634,7 @@ def GetMenuGrid(inlist, duplicates=False):
                 if is_selected:
                     # Draw selection rectangle
                     draw.rectangle(
-                        (x - 2, y - 2, x + 53, y + 23),
+                        (x - 2, y - 2, x + 140, y + 58),
                         fill=color.select
                     )
                     fill_color = color.selected_text
@@ -3630,14 +3647,14 @@ def GetMenuGrid(inlist, duplicates=False):
 
                 if icon:
                     # Draw icon
-                    draw.text((x + 2, y), icon, font=icon_font, fill=fill_color)
+                    draw.text((x + 4, y + 2), icon, font=icon_font, fill=fill_color)
                     # Draw short text label
-                    short_text = txt.strip()[:8]  # Limit text length for grid
-                    draw.text((x, y + 13), short_text, font=text_font, fill=fill_color)
+                    short_text = txt.strip()[:14]  # Limit text length for grid
+                    draw.text((x, y + 30), short_text, font=text_font, fill=fill_color)
                 else:
                     # Draw text only
-                    short_text = txt.strip()[:10]
-                    draw.text((x, y + 8), short_text, font=text_font, fill=fill_color)
+                    short_text = txt.strip()[:14]
+                    draw.text((x, y + 16), short_text, font=text_font, fill=fill_color)
         finally:
             draw_lock.release()
 
@@ -3784,8 +3801,8 @@ def main():
 ### Default values + LCD init ###
 default = Defaults()
 
-LCD = LCD_1in44.LCD()
-Lcd_ScanDir = LCD_1in44.SCAN_DIR_DFT  # SCAN_DIR_DFT = D2U_L2R
+LCD = LCD_480x320.LCD()
+Lcd_ScanDir = LCD_480x320.SCAN_DIR_DFT  # SCAN_DIR_DFT = D2U_L2R
 LCD.LCD_Init(Lcd_ScanDir)
 LCD_Config.Driver_Delay_ms(5)  # 8
 #LCD.LCD_Clear()
@@ -3796,8 +3813,8 @@ LCD.LCD_ShowImage(image, 0, 0)
 # Create draw objects BEFORE main() so color functions can use them
 image = Image.new("RGB", (LCD.width, LCD.height), "WHITE")
 draw = ImageDraw.Draw(image)
-text_font = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', 9)
-icon_font = ImageFont.truetype('/usr/share/fonts/truetype/fontawesome/fa-solid-900.ttf', 12)
+text_font = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', 20)
+icon_font = ImageFont.truetype('/usr/share/fonts/truetype/fontawesome/fa-solid-900.ttf', 26)
 font = text_font  # Keep backward compatibility
 
 ### Defining PINS, threads, loading JSON ###

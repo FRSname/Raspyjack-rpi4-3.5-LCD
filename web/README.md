@@ -12,7 +12,7 @@ It streams LCD frames to the browser and forwards button input back to the devic
 - `device_server.py` (WebSocket server for frames + input)
 - `web_server.py` (static WebUI + read-only loot API)
 - `rj_input.py` (virtual input bridge for browser controls)
-- `LCD_1in44.py` and `LCD_Config.py` (LCD driver used by `payloads/general/webui.py`)
+- `LCD_480x320.py` and `LCD_Config.py` (LCD driver for MPI3501 480×320 display via FBTFT framebuffer; `LCD_1in44.py` is a compatibility shim)
 
 ## Dependencies (install script)
 These are the WebUI-relevant packages in `install_raspyjack.sh`:

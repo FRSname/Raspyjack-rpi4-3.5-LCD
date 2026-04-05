@@ -44,7 +44,7 @@ GIT_BRANCH      = "main"
 INSTALL_SCRIPT  = "/root/Raspyjack/install_raspyjack.sh"
 
 PINS = {"KEY1": 21, "KEY3": 16}
-WIDTH, HEIGHT = 128, 128
+WIDTH, HEIGHT = 480, 320
 FONT = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 10)
 
 # ---------------------------------------------------------------------------

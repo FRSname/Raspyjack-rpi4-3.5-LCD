@@ -35,7 +35,7 @@ except Exception:
     list_devices = None
 
 
-WIDTH, HEIGHT = 128, 128
+WIDTH, HEIGHT = 480, 320
 KEY3_PIN = 16
 ALERT_WINDOW_SEC = 8
 KEY_EVENT_THRESHOLD = 1

@@ -26,7 +26,7 @@ from pathlib import Path
 # Try to import RaspyJack LCD modules
 try:
     sys.path.append('/root/Raspyjack/')
-    import LCD_1in44, LCD_Config
+    import LCD_480x320, LCD_Config
     from PIL import Image, ImageDraw, ImageFont
     import RPi.GPIO as GPIO
     LCD_AVAILABLE = True

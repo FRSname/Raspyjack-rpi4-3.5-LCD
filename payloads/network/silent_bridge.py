@@ -28,7 +28,7 @@ from PIL import Image, ImageDraw, ImageFont  # type: ignore
 from payloads._input_helper import get_button
 
 KEY3_PIN = 16
-WIDTH, HEIGHT = 128, 128
+WIDTH, HEIGHT = 480, 320
 BRIDGE = "br0"
 REFRESH_SEC = 1.0
 

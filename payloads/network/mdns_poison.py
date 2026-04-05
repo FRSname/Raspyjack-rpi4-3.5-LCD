@@ -47,7 +47,7 @@ PINS = {
     "UP": 6, "DOWN": 19, "LEFT": 5, "RIGHT": 26,
     "OK": 13, "KEY1": 21, "KEY2": 20, "KEY3": 16,
 }
-WIDTH, HEIGHT = 128, 128
+WIDTH, HEIGHT = 480, 320
 
 MDNS_ADDR = "224.0.0.251"
 MDNS_PORT = 5353

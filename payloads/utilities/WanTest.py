@@ -153,7 +153,7 @@ def ensure_speedtest_cli_installed(show_progress) -> bool:
 
 # --------------------------- LCD + Buttons ----------------------------------
 
-WIDTH, HEIGHT = 128, 128
+WIDTH, HEIGHT = 480, 320
 PINS = {"UP": 6, "DOWN": 19, "LEFT": 5, "RIGHT": 26, "OK": 13, "KEY1": 21, "KEY2": 20, "KEY3": 16}
 
 GPIO.setmode(GPIO.BCM)

@@ -59,7 +59,7 @@ class FastWiFiSwitcher:
         self.lcd = LCD_1in44.LCD()
         self.lcd.LCD_Init(LCD_1in44.SCAN_DIR_DFT)
         self.lcd.LCD_Clear()
-        self.WIDTH, self.HEIGHT = 128, 128
+        self.WIDTH, self.HEIGHT = 480, 320
         self.font = ImageFont.load_default()
         
         # GPIO setup with FAST response

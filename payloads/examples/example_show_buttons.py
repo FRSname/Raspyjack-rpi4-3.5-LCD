@@ -72,7 +72,7 @@ for pin in PINS.values():
 # ---------------------------------------------------------------------------
 LCD = LCD_1in44.LCD()                     # create driver instance
 LCD.LCD_Init(LCD_1in44.SCAN_DIR_DFT)      # default scan direction (portrait)
-WIDTH, HEIGHT = 128, 128                  # pixels
+WIDTH, HEIGHT = 480, 320                  # pixels
 font = ImageFont.load_default()           # tiny fixed‑width font
 
 # ---------------------------------------------------------------------------

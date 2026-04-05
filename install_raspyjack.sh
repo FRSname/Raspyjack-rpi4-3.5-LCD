@@ -112,6 +112,91 @@ done
 
 grep -qE '^dtoverlay=spi0-[12]cs' "$CFG" || echo 'dtoverlay=spi0-2cs' | sudo tee -a "$CFG" >/dev/null
 
+# ───── 3‑b ▸ MPI3501 display driver (goodtft/lcd-show) ──────
+# The MPI3501 is a 3.5" 480×320 SPI TFT with XPT2046 touch.
+# The lcd-show package installs the FBTFT kernel driver, configures
+# /boot/config.txt overlays and sets up touch calibration.
+# NOTE: LCD35-show triggers a reboot.  The script detects whether
+#       the driver is already installed and skips if so.
+step "Installing MPI3501 display driver (goodtft/lcd-show) …"
+
+LCD_SHOW_DIR="/root/lcd-show"
+_LCD_DRIVER_INSTALLED=0
+
+# Check if the FBTFT overlay is already in config.txt
+if grep -qE '^dtoverlay=tft35a' "$CFG" 2>/dev/null; then
+  info "MPI3501 FBTFT overlay already present in $CFG – skipping lcd-show."
+  _LCD_DRIVER_INSTALLED=1
+fi
+
+if [ "$_LCD_DRIVER_INSTALLED" -eq 0 ]; then
+  # Clone if not already present
+  if [ ! -d "$LCD_SHOW_DIR" ]; then
+    git clone https://github.com/goodtft/lcd-show.git "$LCD_SHOW_DIR"
+  else
+    info "lcd-show directory already exists at $LCD_SHOW_DIR"
+  fi
+  chmod -R 755 "$LCD_SHOW_DIR"
+
+  # Show available 3.5" scripts for reference
+  info "Available 3.5\" display scripts:"
+  ls "$LCD_SHOW_DIR"/*35* 2>/dev/null || warn "No *35* scripts found in lcd-show"
+
+  # Install the driver (LCD35-show).
+  # This modifies /boot/config.txt and sets up fbcp + touch.
+  # It will reboot the Pi at the end.  We mark a flag so that
+  # after reboot the install script can be re-run to finish.
+  RASPYJACK_INSTALL_STATE="/root/.raspyjack_install_state"
+  echo "lcd-show-done" > "$RASPYJACK_INSTALL_STATE"
+
+  step "Running LCD35-show – this will REBOOT the Pi …"
+  info "After reboot, re-run this script to finish installation."
+  cd "$LCD_SHOW_DIR"
+  sudo ./LCD35-show
+  # Script will not reach here – LCD35-show reboots the system
+  exit 0
+fi
+
+# If we reach here after a reboot, clean up the state file
+rm -f /root/.raspyjack_install_state 2>/dev/null || true
+
+# ── Stop fbcp & disable desktop ──────────────────────────────────────
+# Raspyjack writes directly to the framebuffer.  Both fbcp (which
+# mirrors the HDMI desktop onto the SPI LCD) and the X11/Wayland
+# desktop MUST be stopped, otherwise they overwrite our frames
+# and the desktop also consumes touch events.
+step "Stopping fbcp and disabling desktop (Raspyjack owns the framebuffer) …"
+
+# Kill fbcp right now
+sudo killall fbcp 2>/dev/null || true
+
+# Remove fbcp from every known auto-start location
+for f in /etc/rc.local /etc/profile /etc/xdg/lxsession/LXDE-pi/autostart; do
+  [ -f "$f" ] && sudo sed -i '/fbcp/d' "$f" 2>/dev/null || true
+done
+# Remove any systemd fbcp service
+if systemctl list-unit-files fbcp.service >/dev/null 2>&1; then
+  sudo systemctl disable --now fbcp.service 2>/dev/null || true
+fi
+info "fbcp killed and removed from all startup locations"
+
+# Switch to console boot (no GUI desktop)
+# This prevents X11/Wayland from painting to the framebuffer
+# and from consuming the touch input device.
+current_target=$(systemctl get-default 2>/dev/null || echo "")
+if [ "$current_target" != "multi-user.target" ]; then
+  step "Switching boot target to console (multi-user.target) …"
+  sudo systemctl set-default multi-user.target
+  # Stop the desktop session right now if it's running
+  sudo systemctl stop lightdm 2>/dev/null || true
+  sudo systemctl stop gdm3 2>/dev/null || true
+  sudo systemctl stop display-manager 2>/dev/null || true
+  info "Desktop disabled – Pi will boot to console from now on"
+  info "(Restore with: sudo systemctl set-default graphical.target)"
+else
+  info "Already booting to console – good"
+fi
+
 # ───── 4 ▸ WiFi attack setup ──────────────────────────────────
 step "Setting up WiFi attack environment …"
 
@@ -471,11 +556,43 @@ set -e
 # ───── 6 ▸ final health‑check ────────────────────────────────
 step "Running post install checks …"
 
-# 6‑a SPI device nodes
-if ls /dev/spidev* 2>/dev/null | grep -q spidev0.0; then
-  info "SPI device found: $(ls /dev/spidev* | xargs)"
+# 6‑a Framebuffer device for MPI3501
+FOUND_FB=0
+for fb in /sys/class/graphics/fb*; do
+  [ -e "$fb/name" ] || continue
+  FB_NAME=$(cat "$fb/name" 2>/dev/null)
+  FB_DEV="/dev/$(basename $fb)"
+  if echo "$FB_NAME" | grep -qiE "ili9486|ili9488|fbtft|flexfb"; then
+    info "MPI3501 framebuffer found: $FB_DEV ($FB_NAME)"
+    FOUND_FB=1
+    break
+  fi
+done
+if [ "$FOUND_FB" -eq 0 ]; then
+  # Check if any fb exists at all (lcd-show may use a generic name)
+  if [ -e /dev/fb0 ]; then
+    info "Framebuffer /dev/fb0 exists (lcd-show driver assumed active)"
+  else
+    warn "No framebuffer device found – has lcd-show been installed?"
+  fi
+fi
+
+# 6‑a2 Touch input device
+if ls /dev/input/event* >/dev/null 2>&1; then
+  TOUCH_FOUND=0
+  for ev in /dev/input/event*; do
+    EV_NAME=$(cat "/sys/class/input/$(basename $ev)/../name" 2>/dev/null || true)
+    if echo "$EV_NAME" | grep -qiE "ads7846|xpt2046|touch"; then
+      info "Touch device found: $ev ($EV_NAME)"
+      TOUCH_FOUND=1
+      break
+    fi
+  done
+  if [ "$TOUCH_FOUND" -eq 0 ]; then
+    warn "No ADS7846/XPT2046 touch device found in /dev/input/ – touch may not work"
+  fi
 else
-  warn "SPI device NOT found – a reboot may still be required."
+  warn "No /dev/input/event* devices – touch will not work"
 fi
 
 # 6‑b WiFi attack tools check
@@ -495,7 +612,7 @@ fi
 # 6‑d python imports
 python3 - <<'PY' || fail "Python dependency test failed"
 import importlib, sys
-for mod in ("scapy", "netifaces", "pyudev", "serial", "smbus2", "RPi.GPIO", "spidev", "PIL", "qrcode", "requests", "bluepy"):
+for mod in ("scapy", "netifaces", "pyudev", "serial", "smbus2", "RPi.GPIO", "evdev", "PIL", "qrcode", "requests", "bluepy", "numpy"):
     try:
         importlib.import_module(mod.split('.')[0])
     except Exception as e:
@@ -527,4 +644,6 @@ fi
 
 step "Installation finished successfully!"
 info "⚠️  Reboot is recommended to ensure overlays & services start cleanly."
-info "📡 For WiFi attacks: Plug in USB WiFi dongle and run payloads/interception/deauth.py"
+info "�️  Display: MPI3501 480×320 via framebuffer (lcd-show driver)"
+info "👆 Touch: XPT2046 via kernel evdev"
+info "�📡 For WiFi attacks: Plug in USB WiFi dongle and run payloads/interception/deauth.py"

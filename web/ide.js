@@ -1445,7 +1445,7 @@ import time
 import signal
 import subprocess
 import RPi.GPIO as GPIO
-import LCD_1in44
+import LCD_480x320
 from PIL import Image, ImageDraw, ImageFont
 from payloads._input_helper import get_button
 
@@ -1460,9 +1460,9 @@ for pin in PINS.values():
     GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
 # LCD Setup
-LCD = LCD_1in44.LCD()
-LCD.LCD_Init(LCD_1in44.SCAN_DIR_DFT)
-WIDTH, HEIGHT = 128, 128
+LCD = LCD_480x320.LCD()
+LCD.LCD_Init(LCD_480x320.SCAN_DIR_DFT)
+WIDTH, HEIGHT = 480, 320
 font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 9)
 canvas = Image.new("RGB", (WIDTH, HEIGHT), "black")
 draw = ImageDraw.Draw(canvas)
@@ -1555,7 +1555,7 @@ sys.path.append(os.path.abspath(os.path.join(__file__, '..', '..')))
 import time
 import signal
 import RPi.GPIO as GPIO
-import LCD_1in44
+import LCD_480x320
 from PIL import Image, ImageDraw, ImageFont
 from payloads._input_helper import get_button
 
@@ -1566,9 +1566,9 @@ GPIO.setmode(GPIO.BCM)
 for pin in PINS.values():
     GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
-LCD = LCD_1in44.LCD()
-LCD.LCD_Init(LCD_1in44.SCAN_DIR_DFT)
-WIDTH, HEIGHT = 128, 128
+LCD = LCD_480x320.LCD()
+LCD.LCD_Init(LCD_480x320.SCAN_DIR_DFT)
+WIDTH, HEIGHT = 480, 320
 font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 9)
 canvas = Image.new("RGB", (WIDTH, HEIGHT), "black")
 draw = ImageDraw.Draw(canvas)
@@ -1663,7 +1663,7 @@ import subprocess
 import threading
 from datetime import datetime
 import RPi.GPIO as GPIO
-import LCD_1in44
+import LCD_480x320
 from PIL import Image, ImageDraw, ImageFont
 from payloads._input_helper import get_button
 
@@ -1678,9 +1678,9 @@ GPIO.setmode(GPIO.BCM)
 for pin in PINS.values():
     GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
-LCD = LCD_1in44.LCD()
-LCD.LCD_Init(LCD_1in44.SCAN_DIR_DFT)
-WIDTH, HEIGHT = 128, 128
+LCD = LCD_480x320.LCD()
+LCD.LCD_Init(LCD_480x320.SCAN_DIR_DFT)
+WIDTH, HEIGHT = 480, 320
 font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 10)
 canvas = Image.new("RGB", (WIDTH, HEIGHT), "black")
 draw = ImageDraw.Draw(canvas)
@@ -1782,7 +1782,7 @@ import json
 import threading
 from datetime import datetime
 import RPi.GPIO as GPIO
-import LCD_1in44
+import LCD_480x320
 from PIL import Image, ImageDraw, ImageFont
 from payloads._input_helper import get_button
 
@@ -1797,9 +1797,9 @@ GPIO.setmode(GPIO.BCM)
 for pin in PINS.values():
     GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
-LCD = LCD_1in44.LCD()
-LCD.LCD_Init(LCD_1in44.SCAN_DIR_DFT)
-WIDTH, HEIGHT = 128, 128
+LCD = LCD_480x320.LCD()
+LCD.LCD_Init(LCD_480x320.SCAN_DIR_DFT)
+WIDTH, HEIGHT = 480, 320
 font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 10)
 canvas = Image.new("RGB", (WIDTH, HEIGHT), "black")
 draw = ImageDraw.Draw(canvas)
@@ -1891,7 +1891,7 @@ sys.path.append(os.path.abspath(os.path.join(__file__, '..', '..')))
 import time
 import signal
 import RPi.GPIO as GPIO
-import LCD_1in44
+import LCD_480x320
 from PIL import Image, ImageDraw, ImageFont
 from payloads._input_helper import get_button
 
@@ -1903,9 +1903,9 @@ GPIO.setmode(GPIO.BCM)
 for pin in PINS.values():
     GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
-LCD = LCD_1in44.LCD()
-LCD.LCD_Init(LCD_1in44.SCAN_DIR_DFT)
-WIDTH, HEIGHT = 128, 128
+LCD = LCD_480x320.LCD()
+LCD.LCD_Init(LCD_480x320.SCAN_DIR_DFT)
+WIDTH, HEIGHT = 480, 320
 font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 10)
 canvas = Image.new("RGB", (WIDTH, HEIGHT), "black")
 draw = ImageDraw.Draw(canvas)
@@ -1999,7 +1999,7 @@ import time
 import signal
 import subprocess
 import RPi.GPIO as GPIO
-import LCD_1in44
+import LCD_480x320
 from PIL import Image, ImageDraw, ImageFont
 from payloads._input_helper import get_button
 
@@ -2009,9 +2009,9 @@ GPIO.setmode(GPIO.BCM)
 for pin in PINS.values():
     GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
-LCD = LCD_1in44.LCD()
-LCD.LCD_Init(LCD_1in44.SCAN_DIR_DFT)
-WIDTH, HEIGHT = 128, 128
+LCD = LCD_480x320.LCD()
+LCD.LCD_Init(LCD_480x320.SCAN_DIR_DFT)
+WIDTH, HEIGHT = 480, 320
 font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 9)
 canvas = Image.new("RGB", (WIDTH, HEIGHT), "black")
 draw = ImageDraw.Draw(canvas)
@@ -2338,12 +2338,12 @@ for pin in PINS.values():
 
     const lcdSetup = `
 # LCD Initialization
-import LCD_1in44, LCD_Config
+import LCD_480x320, LCD_Config
 from PIL import Image, ImageDraw, ImageFont
 
-LCD = LCD_1in44.LCD()
-LCD.LCD_Init(LCD_1in44.SCAN_DIR_DFT)
-WIDTH, HEIGHT = 128, 128
+LCD = LCD_480x320.LCD()
+LCD.LCD_Init(LCD_480x320.SCAN_DIR_DFT)
+WIDTH, HEIGHT = 480, 320
 font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 10)
 canvas = Image.new("RGB", (WIDTH, HEIGHT), "black")
 draw = ImageDraw.Draw(canvas)

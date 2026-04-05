@@ -175,7 +175,7 @@ class WardrivingScanner:
             self.LCD.LCD_Clear()
             self.log("LCD cleared - this should fix white screen issue")
             
-            self.WIDTH, self.HEIGHT = 128, 128
+            self.WIDTH, self.HEIGHT = 480, 320
             self.log(f"LCD dimensions set: {self.WIDTH}x{self.HEIGHT}")
             
             self.font = ImageFont.load_default()

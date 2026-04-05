@@ -38,7 +38,7 @@ for pin in PINS.values():
 
 LCD = LCD_1in44.LCD()
 LCD.LCD_Init(LCD_1in44.SCAN_DIR_DFT)
-WIDTH, HEIGHT = 128, 128
+WIDTH, HEIGHT = 480, 320
 font = ImageFont.load_default()
 
 INTERFACES = ["eth0", "wlan0", "wlan1"]

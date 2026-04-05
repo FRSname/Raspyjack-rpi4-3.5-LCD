@@ -616,7 +616,7 @@ class HoneypotLCD:
         except Exception as e:
             hp.debug(f"LCD_Init failed: {e}")
             raise
-        self.W, self.H = 128, 128
+        self.W, self.H = 480, 320
         try:
             self.font_large = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 12)
         except Exception:

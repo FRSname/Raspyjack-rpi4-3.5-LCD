@@ -442,23 +442,10 @@
 
       <!-- Device card -->
       <div id="deviceTab" class="block">
-        <div class="flex flex-col md:flex-row md:items-start md:gap-6">
-          <div class="md:order-1 order-2 flex-1 min-w-0">
-            <div class="terminal-wrap terminal-divider md:pr-6">
-              <div class="flex items-center justify-between px-4 py-3 border-b border-slate-800/70">
-                <div class="text-sm font-semibold text-emerald-300">Terminal</div>
-                <div class="flex items-center gap-2">
-                  <div id="shellStatus" class="text-[11px] text-slate-400">Disconnected</div>
-                  <button id="shellConnect" type="button" class="px-3 py-1.5 text-xs rounded-lg bg-emerald-600/80 border border-emerald-300/30 text-white hover:bg-emerald-500/80 transition">Open</button>
-                  <button id="shellDisconnect" type="button" class="px-3 py-1.5 text-xs rounded-lg bg-slate-800/80 border border-slate-600/40 text-slate-200 hover:bg-slate-700/80 transition">Close</button>
-                </div>
-              </div>
-              <div id="terminal" class="terminal-body"></div>
-            </div>
-          </div>
-
-          <div class="md:order-2 order-1 flex justify-center md:justify-end md:pl-6">
-            <div id="deviceShell" data-theme="neon" class="device-shell theme-neon rounded-3xl p-4 md:p-5 w-fit mx-auto md:mx-0">
+        <div class="flex flex-col items-center gap-6">
+          <!-- Device shell (screen + buttons) -->
+          <div class="flex justify-center w-full">
+            <div id="deviceShell" data-theme="neon" class="device-shell theme-neon rounded-3xl p-4 md:p-5 w-fit mx-auto">
       <div class="pager-clip" aria-hidden="true"></div>
       <div class="pager-brand">RaspyJack P200</div>
       <div class="pager-speaker" aria-hidden="true">
@@ -485,7 +472,7 @@
         <div class="order-1 md:order-2 col-span-2 md:col-span-1">
           <div class="screen-frame rounded-2xl p-2">
             <div class="flex items-center justify-center">
-              <canvas id="screen" width="128" height="128" class="w-[240px] md:w-[300px] aspect-square"></canvas>
+              <canvas id="screen" width="480" height="320" class="w-[240px] md:w-[700px]" style="aspect-ratio:3/2"></canvas>
             </div>
           </div>
           <div class="pager-text mt-3 text-center text-xs text-slate-400">OK = Enter · KEY3 = Esc</div>
@@ -497,13 +484,13 @@
           <button class="rj-btn key-btn rounded-xl bg-fuchsia-700/80 hover:bg-fuchsia-600/80 px-3 py-2 w-24 ring-1 ring-white/10 transition" data-btn="KEY1">KEY1</button>
           <button class="rj-btn key-btn rounded-xl bg-fuchsia-700/80 hover:bg-fuchsia-600/80 px-3 py-2 w-24 ring-1 ring-white/10 transition" data-btn="KEY2">KEY2</button>
           <button class="rj-btn key-btn rounded-xl bg-fuchsia-700/80 hover:bg-fuchsia-600/80 px-3 py-2 w-24 ring-1 ring-white/10 transition" data-btn="KEY3">KEY3</button>
-        </div>
+        </div>  <!-- Right buttons -->
       </div>
 
       <!-- Game Boy layout -->
       <div class="layout-gameboy hidden">
         <div class="screen-frame">
-          <canvas id="screen-gb" width="128" height="128" class="w-[240px] md:w-[300px] aspect-square"></canvas>
+          <canvas id="screen-gb" width="480" height="320" class="w-[360px] md:w-[450px]" style="aspect-ratio:3/2"></canvas>
         </div>
         <div class="flex justify-between mb-4">
           <div class="grid grid-cols-3 grid-rows-3 gap-2">
@@ -530,7 +517,7 @@
       <!-- Pager layout -->
       <div class="layout-pager hidden">
         <div class="screen-frame">
-          <canvas id="screen-pager" width="128" height="128" class="w-[240px] md:w-[300px] aspect-square"></canvas>
+          <canvas id="screen-pager" width="480" height="320" class="w-[360px] md:w-[450px]" style="aspect-ratio:3/2"></canvas>
         </div>
         <div class="flex justify-between mb-4 mt-4">
           <div class="grid grid-cols-3 grid-rows-3 gap-2">
@@ -556,7 +543,23 @@
         </div>
       </div>
       </div>
-      </div>
+
+          <!-- Terminal (below device shell) -->
+          <div class="w-full">
+            <div class="terminal-wrap terminal-divider">
+              <div class="flex items-center justify-between px-4 py-3 border-b border-slate-800/70">
+                <div class="text-sm font-semibold text-emerald-300">Terminal</div>
+                <div class="flex items-center gap-2">
+                  <div id="shellStatus" class="text-[11px] text-slate-400">Disconnected</div>
+                  <button id="shellConnect" type="button" class="px-3 py-1.5 text-xs rounded-lg bg-emerald-600/80 border border-emerald-300/30 text-white hover:bg-emerald-500/80 transition">Open</button>
+                  <button id="shellDisconnect" type="button" class="px-3 py-1.5 text-xs rounded-lg bg-slate-800/80 border border-slate-600/40 text-slate-200 hover:bg-slate-700/80 transition">Close</button>
+                </div>
+              </div>
+              <div id="terminal" class="terminal-body"></div>
+            </div>
+          </div>
+        </div>  <!-- end flex-col -->
+      </div>  <!-- end deviceTab -->
 
       <!-- Settings -->
       <div id="settingsTab" class="hidden">

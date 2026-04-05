@@ -25,7 +25,7 @@ import threading
 sys.path.append('/root/Raspyjack/')
 
 try:
-    import LCD_1in44, LCD_Config
+    import LCD_480x320, LCD_Config
     from PIL import Image, ImageDraw, ImageFont
     import RPi.GPIO as GPIO
     from wifi_manager import WiFiManager
@@ -42,11 +42,11 @@ class WiFiLCDInterface:
         self.wifi_manager = WiFiManager()
         
         # LCD setup
-        self.LCD = LCD_1in44.LCD()
-        self.LCD.LCD_Init(LCD_1in44.SCAN_DIR_DFT)
-        self.canvas = Image.new("RGB", (128, 128), "black")
+        self.LCD = LCD_480x320.LCD()
+        self.LCD.LCD_Init(LCD_480x320.SCAN_DIR_DFT)
+        self.canvas = Image.new("RGB", (480, 320), "black")
         self.draw = ImageDraw.Draw(self.canvas)
-        self.font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 8)
+        self.font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 18)
         
         # GPIO setup
         GPIO.setmode(GPIO.BCM)
@@ -103,9 +103,9 @@ class WiFiLCDInterface:
     
     def draw_header(self, title):
         """Draw menu header."""
-        self.canvas.paste(Image.new("RGB", (128, 128), "black"))
-        self.draw.text((2, 0), title[:18], fill="yellow", font=self.font)
-        self.draw.line([(0, 12), (128, 12)], fill="blue", width=1)
+        self.canvas.paste(Image.new("RGB", (480, 320), "black"))
+        self.draw.text((4, 0), title[:40], fill="yellow", font=self.font)
+        self.draw.line([(0, 26), (480, 26)], fill="blue", width=1)
     
     def draw_status_bar(self):
         """Draw connection status at bottom."""
@@ -135,13 +135,13 @@ class WiFiLCDInterface:
         y_pos = 18
         for i, item in enumerate(menu_items):
             if i == self.menu_index:
-                self.draw.rectangle([(0, y_pos-2), (128, y_pos+10)], fill="blue")
+                self.draw.rectangle([(0, y_pos-2), (480, y_pos+22)], fill="blue")
                 color = "white"
             else:
                 color = "white"
             
-            self.draw.text((4, y_pos), item[:16], fill=color, font=self.font)
-            y_pos += 12
+            self.draw.text((4, y_pos), item[:30], fill=color, font=self.font)
+            y_pos += 28
         
         # Button hints
         self.draw.text((2, 100), "↕️ Navigate  ⭕ Select", fill="cyan", font=self.font)
@@ -164,7 +164,7 @@ class WiFiLCDInterface:
                 ssid = network.get('ssid', 'Unknown')[:12]
                 
                 if i == self.menu_index:
-                    self.draw.rectangle([(0, y_pos-2), (128, y_pos+10)], fill="blue")
+                    self.draw.rectangle([(0, y_pos-2), (480, y_pos+22)], fill="blue")
                     color = "white"
                 else:
                     color = "white"
@@ -197,7 +197,7 @@ class WiFiLCDInterface:
                 priority = profile.get('priority', 1)
                 
                 if i == self.menu_index:
-                    self.draw.rectangle([(0, y_pos-2), (128, y_pos+10)], fill="blue")
+                    self.draw.rectangle([(0, y_pos-2), (480, y_pos+22)], fill="blue")
                     color = "white"
                 else:
                     color = "white"
@@ -221,7 +221,7 @@ class WiFiLCDInterface:
         
         for i, interface in enumerate(interfaces):
             if i == self.menu_index:
-                self.draw.rectangle([(0, y_pos-2), (128, y_pos+10)], fill="blue")
+                self.draw.rectangle([(0, y_pos-2), (480, y_pos+22)], fill="blue")
                 color = "white"
             else:
                 color = "white"
@@ -470,8 +470,8 @@ class WiFiLCDInterface:
     
     def show_message(self, message, duration=2):
         """Show a temporary message."""
-        self.canvas.paste(Image.new("RGB", (128, 128), "black"))
-        self.draw.text((4, 50), message[:16], fill="yellow", font=self.font)
+        self.canvas.paste(Image.new("RGB", (480, 320), "black"))
+        self.draw.text((4, 130), message[:30], fill="yellow", font=self.font)
         self.LCD.LCD_ShowImage(self.canvas, 0, 0)
         time.sleep(duration)
     

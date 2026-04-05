@@ -817,13 +817,13 @@ finally:
           <div class="gpio-section-body hidden mt-2" data-gpio-body="lcd">
             <div class="p-2 rounded-lg bg-slate-800/30 border border-slate-800/70">
               <div class="grid grid-cols-2 gap-2 text-[10px]">
-                <div><span class="text-slate-400">Type:</span> <span class="font-mono">1.44" TFT</span></div>
-                <div><span class="text-slate-400">Resolution:</span> <span class="font-mono">128x128</span></div>
-                <div><span class="text-slate-400">Driver:</span> <span class="font-mono">LCD_1in44</span></div>
-                <div><span class="text-slate-400">Interface:</span> <span class="font-mono">SPI</span></div>
+                <div><span class="text-slate-400">Type:</span> <span class="font-mono">3.5" TFT</span></div>
+                <div><span class="text-slate-400">Resolution:</span> <span class="font-mono">480x320</span></div>
+                <div><span class="text-slate-400">Driver:</span> <span class="font-mono">LCD_480x320</span></div>
+                <div><span class="text-slate-400">Interface:</span> <span class="font-mono">Framebuffer (FBTFT)</span></div>
               </div>
             </div>
-            <p class="text-[10px] text-slate-400 mt-1">Uses Waveshare 1.44inch LCD HAT with ST7735S controller. Supports RGB565 color format via PIL/Pillow.</p>
+            <p class="text-[10px] text-slate-400 mt-1">MPI3501 480×320 display via FBTFT kernel framebuffer (goodtft/lcd-show). XPT2046 touch input via evdev. RGB565 output from PIL/Pillow.</p>
           </div>
         </div>
       </div>

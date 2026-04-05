@@ -28,7 +28,7 @@ from payloads._input_helper import get_button
 
 # --------------------------- Configuration ---------------------------------
 
-WIDTH, HEIGHT = 128, 128
+WIDTH, HEIGHT = 480, 320
 HISTORY_LEN = 64              # number of points to show in the sparkline
 PROBE_TIMEOUT_S = 1.0         # TCP connect timeout per probe
 JITTER_WINDOW = 10            # last N samples to compute jitter

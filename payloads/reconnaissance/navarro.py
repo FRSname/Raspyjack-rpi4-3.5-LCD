@@ -50,7 +50,7 @@ PINS = {
     "KEY3": 16,
 }
 
-WIDTH, HEIGHT = 128, 128
+WIDTH, HEIGHT = 480, 320
 FONT_PATH = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
 FONT_SMALL_SIZE = 9
 FONT_BIG_SIZE = 11

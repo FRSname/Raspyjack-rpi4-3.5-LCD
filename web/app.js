@@ -9,20 +9,21 @@
   // Enable high-DPI backing store and high-quality smoothing
   function setupHiDPI(){
     const DPR = Math.max(1, Math.floor(window.devicePixelRatio || 1));
-    const logical = 128;
-    canvas.width = logical * DPR;
-    canvas.height = logical * DPR;
+    const logicalW = 480;
+    const logicalH = 320;
+    canvas.width = logicalW * DPR;
+    canvas.height = logicalH * DPR;
     ctx.imageSmoothingEnabled = true;
     try { ctx.imageSmoothingQuality = 'high'; } catch {}
     if (canvasGb && ctxGb) {
-      canvasGb.width = logical * DPR;
-      canvasGb.height = logical * DPR;
+      canvasGb.width = logicalW * DPR;
+      canvasGb.height = logicalH * DPR;
       ctxGb.imageSmoothingEnabled = true;
       try { ctxGb.imageSmoothingQuality = 'high'; } catch {}
     }
     if (canvasPager && ctxPager) {
-      canvasPager.width = logical * DPR;
-      canvasPager.height = logical * DPR;
+      canvasPager.width = logicalW * DPR;
+      canvasPager.height = logicalH * DPR;
       ctxPager.imageSmoothingEnabled = true;
       try { ctxPager.imageSmoothingQuality = 'high'; } catch {}
     }
