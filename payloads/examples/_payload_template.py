@@ -15,9 +15,10 @@ sys.path.append(os.path.abspath(os.path.join(__file__, "..", "..", "..")))
 import RPi.GPIO as GPIO
 import LCD_1in44, LCD_Config
 from PIL import Image, ImageDraw, ImageFont
+from payloads._display_helper import ScaledDraw, scaled_font
 
 # WebUI + GPIO input helper
-from payloads._input_helper import get_button, safe_gpio_setup
+from payloads._input_helper import get_button
 
 PINS = {
     "UP": 6,
@@ -30,17 +31,19 @@ PINS = {
     "KEY3": 16,
 }
 
-safe_gpio_setup(PINS, GPIO)
+GPIO.setmode(GPIO.BCM)
+for pin in PINS.values():
+    GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
 LCD = LCD_1in44.LCD()
 LCD.LCD_Init(LCD_1in44.SCAN_DIR_DFT)
-WIDTH, HEIGHT = 480, 320
-font = ImageFont.load_default()
+WIDTH, HEIGHT = LCD.width, LCD.height
+font = scaled_font()
 
 
 def draw(lines):
     img = Image.new("RGB", (WIDTH, HEIGHT), "black")
-    d = ImageDraw.Draw(img)
+    d = ScaledDraw(img)
     y = 4
     for line in lines:
         d.text((4, y), line[:18], font=font, fill="white")
