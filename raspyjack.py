@@ -3472,19 +3472,21 @@ class DisposableMenu:
 
 
 ### Font Awesome Icon Mapping ###
-MENU_ICONS = {
-    " Scan Nmap": "\uf002",        # search
-    " Reverse Shell": "\uf120",    # terminal
-    " Responder": "\uf505",        # responder (updated)
-    " MITM & Sniff": "\uf6ff",     # MITM (updated)
-    " DNS Spoofing": "\uf233",     # server
-    " Network info": "\ue012",     # network info (updated)
-    " WiFi Manager": "\uf1eb",     # wifi
-    " Other features": "\uf085",   # cogs
-    " Read file": "\uf15c",        # file-alt
-    " Payload": "\uf121",          # code/terminal icon
-    " Lock": "\uf023",             # lock
-}
+def _load_menu_icons():
+    """Load menu icons from menu_icons.json. Returns flat dict."""
+    icons = {}
+    icon_path = os.path.join(Defaults.install_path, "menu_icons.json")
+    try:
+        with open(icon_path, "r") as f:
+            data = json.load(f)
+        for section in ("main_menu", "categories", "payloads"):
+            if section in data:
+                icons.update(data[section])
+    except Exception:
+        pass
+    return icons
+
+MENU_ICONS = _load_menu_icons()
 
 ### Menu Descriptions for Carousel View ###
 MENU_DESCRIPTIONS = {
