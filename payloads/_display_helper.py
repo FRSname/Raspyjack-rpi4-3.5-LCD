@@ -10,9 +10,10 @@ Usage in a payload:
 
 All pixel coordinates passed to d.text(), d.rectangle(), d.line(), etc.
 are automatically scaled from 128-base to the actual LCD resolution.
-For non-square displays (e.g. 480x320), X and Y are scaled independently:
+For non-square displays (e.g. 480x320) with a 50px button bar at the bottom:
   X: 128-base  ->  480  (scale 3.75)
-  Y: 128-base  ->  320  (scale 2.50)
+  Y: 128-base  ->  270  (scale 2.109)  ← maps to content area only,
+                                          leaving the button bar untouched
 """
 import os, sys, json
 from PIL import ImageDraw, ImageFont
@@ -38,9 +39,20 @@ for _p in _CONF_PATHS:
             pass
         break
 
-# Per-axis scale factors from 128-base to actual resolution
+# Button bar composited by LCD_480x320 over the bottom of the framebuffer
+_LCD_BAR_H = 0
+try:
+    from LCD_480x320 import BUTTON_BAR_H as _LCD_BAR_H
+except ImportError:
+    pass
+
+LCD_BUTTON_BAR_H = _LCD_BAR_H               # height of on-screen button bar (px)
+LCD_CONTENT_H    = _LCD_H - _LCD_BAR_H      # usable pixel height above the bar
+
+# Per-axis scale factors from 128-base to actual resolution.
+# Y maps to the *content* area only so payload drawing never overlaps the bar.
 LCD_SCALE_X = _LCD_W / 128
-LCD_SCALE_Y = _LCD_H / 128
+LCD_SCALE_Y = max(LCD_CONTENT_H, 128) / 128
 LCD_SCALE   = min(LCD_SCALE_X, LCD_SCALE_Y)   # legacy single-axis (safe minimum)
 
 
@@ -108,8 +120,15 @@ class ScaledDraw:
     def __init__(self, image):
         self._draw = ImageDraw.Draw(image)
         w, h = image.size
-        self._sx = w / 128.0          # per-instance X scale
-        self._sy = h / 128.0          # per-instance Y scale
+        # Subtract the button bar so payload content stays in the content area
+        bar_h = 0
+        try:
+            from LCD_480x320 import BUTTON_BAR_H as bar_h
+        except ImportError:
+            pass
+        content_h = max(h - bar_h, 1)
+        self._sx = w / 128.0           # X: full width
+        self._sy = content_h / 128.0   # Y: content area only (above button bar)
         self._s  = min(self._sx, self._sy)
         self._passthrough = (abs(self._sx - 1.0) < 0.001
                              and abs(self._sy - 1.0) < 0.001)
