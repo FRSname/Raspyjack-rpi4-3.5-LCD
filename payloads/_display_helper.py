@@ -1,5 +1,5 @@
 """
-Display helper for payloads – automatic 128-base coordinate scaling.
+Display helper for payloads – automatic coordinate scaling for any LCD size.
 
 Usage in a payload:
     from payloads._display_helper import ScaledDraw, scaled_font
@@ -10,14 +10,18 @@ Usage in a payload:
 
 All pixel coordinates passed to d.text(), d.rectangle(), d.line(), etc.
 are automatically scaled from 128-base to the actual LCD resolution.
+For non-square displays (e.g. 480x320), X and Y are scaled independently:
+  X: 128-base  ->  480  (scale 3.75)
+  Y: 128-base  ->  320  (scale 2.50)
 """
 import os, sys, json
 from PIL import ImageDraw, ImageFont
 
 # ---------------------------------------------------------------------------
-# Detect scale factor (same logic as LCD_1in44.py)
+# Read display dimensions from gui_conf.json
 # ---------------------------------------------------------------------------
-_DISPLAY_TYPE = "ST7735_128"
+_LCD_W = 128
+_LCD_H = 128
 _CONF_PATHS = [
     os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "gui_conf.json"),
     "/root/Raspyjack/gui_conf.json",
@@ -27,16 +31,29 @@ for _p in _CONF_PATHS:
         try:
             with open(_p, "r") as _f:
                 _conf = json.load(_f)
-            _DISPLAY_TYPE = _conf.get("DISPLAY", {}).get("type", _DISPLAY_TYPE)
+            _disp = _conf.get("DISPLAY", {})
+            _LCD_W = int(_disp.get("WIDTH",  _disp.get("width",  128)))
+            _LCD_H = int(_disp.get("HEIGHT", _disp.get("height", 128)))
         except Exception:
             pass
         break
 
-LCD_SCALE = 240 / 128 if _DISPLAY_TYPE == "ST7789_240" else 1.0
+# Per-axis scale factors from 128-base to actual resolution
+LCD_SCALE_X = _LCD_W / 128
+LCD_SCALE_Y = _LCD_H / 128
+LCD_SCALE   = min(LCD_SCALE_X, LCD_SCALE_Y)   # legacy single-axis (safe minimum)
 
+
+def SX(v):
+    """Scale a 128-base X value to the current display width."""
+    return int(v * LCD_SCALE_X)
+
+def SY(v):
+    """Scale a 128-base Y value to the current display height."""
+    return int(v * LCD_SCALE_Y)
 
 def S(v):
-    """Scale a 128-base pixel value to the current display resolution."""
+    """Scale a 128-base value using the smaller axis (fits both X and Y)."""
     return int(v * LCD_SCALE)
 
 
@@ -46,7 +63,7 @@ def scaled_font(size=10):
     *size* is the desired point size on a 128px screen; the returned font
     is proportionally larger on bigger panels.
     """
-    scaled_size = S(size)
+    scaled_size = max(8, S(size))
     try:
         return ImageFont.truetype(
             "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", scaled_size
@@ -59,8 +76,8 @@ def scaled_font(size=10):
 # ScaledDraw – wraps ImageDraw.Draw, scaling all 128-base coordinates
 # ---------------------------------------------------------------------------
 def _scale_point(pt):
-    """Scale a 2-tuple or 2-list."""
-    return (S(pt[0]), S(pt[1]))
+    """Scale a (x, y) point using per-axis scale factors."""
+    return (SX(pt[0]), SY(pt[1]))
 
 
 def _scale_coords(coords):
@@ -69,25 +86,26 @@ def _scale_coords(coords):
         return coords
     # list/tuple of 2-tuples: [(x,y), (x,y), ...]
     if isinstance(coords[0], (list, tuple)):
-        return [_scale_point(p) for p in coords]
-    # flat 4-value box: (x0, y0, x1, y1) or [x0, y0, x1, y1]
+        return [(SX(p[0]), SY(p[1])) for p in coords]
+    # flat 4-value box: (x0, y0, x1, y1)
     if len(coords) == 4:
-        return [S(coords[0]), S(coords[1]), S(coords[2]), S(coords[3])]
+        return [SX(coords[0]), SY(coords[1]), SX(coords[2]), SY(coords[3])]
     # flat 2-value point
     if len(coords) == 2:
-        return (S(coords[0]), S(coords[1]))
+        return (SX(coords[0]), SY(coords[1]))
     return coords
 
 
 class ScaledDraw:
     """Drop-in replacement for ``ImageDraw.Draw`` that auto-scales coordinates.
 
-    If ``LCD_SCALE == 1.0`` (128x128), no overhead is added.
+    If the display is 128x128, no overhead is added (passthrough mode).
+    For non-square displays (e.g. 480x320), X and Y are scaled independently.
     """
 
     def __init__(self, image):
         self._draw = ImageDraw.Draw(image)
-        self._passthrough = LCD_SCALE == 1.0
+        self._passthrough = (LCD_SCALE_X == 1.0 and LCD_SCALE_Y == 1.0)
 
     # -- Scaled drawing primitives ------------------------------------------
 
