@@ -58,7 +58,6 @@ font = scaled_font()
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-HCI_DEV = "hci0"
 MODES = ["FastPair", "iOS", "Windows", "ALL"]
 SPEED_LEVELS = [200, 150, 100, 75, 50]  # ms between broadcasts
 SPEED_LABELS = ["Slow", "Med", "Fast", "Vfast", "Max"]
@@ -101,6 +100,26 @@ SWIFT_PAIR_NAMES = [
 ]
 
 # ---------------------------------------------------------------------------
+# HCI device detection
+# ---------------------------------------------------------------------------
+def _detect_hci_devices():
+    """Return list of available HCI device names (e.g. ['hci0', 'hci1'])."""
+    try:
+        result = subprocess.run(
+            ["hciconfig"],
+            capture_output=True, text=True, timeout=5,
+        )
+        devs = [line.split(":")[0].strip()
+                for line in result.stdout.splitlines()
+                if line.startswith("hci")]
+        return devs if devs else ["hci0"]
+    except Exception:
+        return ["hci0"]
+
+HCI_DEVICES = _detect_hci_devices()
+hci_dev_idx = 1 if len(HCI_DEVICES) > 1 else 0  # prefer USB dongle (hci1)
+
+# ---------------------------------------------------------------------------
 # Shared state
 # ---------------------------------------------------------------------------
 lock = threading.Lock()
@@ -116,10 +135,15 @@ last_device = ""
 # HCI helpers
 # ---------------------------------------------------------------------------
 
+def _active_hci():
+    """Return the currently selected HCI device name."""
+    return HCI_DEVICES[hci_dev_idx]
+
+
 def _hci_up():
-    """Bring hci0 up."""
+    """Bring selected HCI device up."""
     subprocess.run(
-        ["sudo", "hciconfig", HCI_DEV, "up"],
+        ["sudo", "hciconfig", _active_hci(), "up"],
         capture_output=True, timeout=5,
     )
 
@@ -129,7 +153,7 @@ def _hci_set_adv_data(hex_bytes):
     length = f"{len(hex_bytes):02X}"
     hex_str = " ".join(f"{b:02X}" for b in hex_bytes)
     cmd = (
-        f"sudo hcitool -i {HCI_DEV} cmd 0x08 0x0008 "
+        f"sudo hcitool -i {_active_hci()} cmd 0x08 0x0008 "
         f"{length} {hex_str}"
     )
     return subprocess.run(
@@ -140,7 +164,7 @@ def _hci_set_adv_data(hex_bytes):
 def _hci_enable_adv():
     """Enable LE advertising."""
     subprocess.run(
-        ["sudo", "hcitool", "-i", HCI_DEV, "cmd", "0x08", "0x000a", "01"],
+        ["sudo", "hcitool", "-i", _active_hci(), "cmd", "0x08", "0x000a", "01"],
         capture_output=True, timeout=5,
     )
 
@@ -148,7 +172,7 @@ def _hci_enable_adv():
 def _hci_disable_adv():
     """Disable LE advertising."""
     subprocess.run(
-        ["sudo", "hcitool", "-i", HCI_DEV, "cmd", "0x08", "0x000a", "00"],
+        ["sudo", "hcitool", "-i", _active_hci(), "cmd", "0x08", "0x000a", "00"],
         capture_output=True, timeout=5,
     )
 
@@ -160,7 +184,7 @@ def _hci_set_adv_params():
     # channel map=7, filter=0
     subprocess.run(
         [
-            "sudo", "hcitool", "-i", HCI_DEV, "cmd",
+            "sudo", "hcitool", "-i", _active_hci(), "cmd",
             "0x08", "0x0006",
             "A0", "00",   # min interval
             "A0", "00",   # max interval
@@ -265,6 +289,8 @@ def _spam_loop():
                 break
             current_mode = MODES[mode_idx]
             delay_ms = SPEED_LEVELS[speed_idx]
+            # re-init adv params if device changed mid-run
+            _hci_set_adv_params()
 
         builders = []
         if current_mode in ("FastPair", "ALL"):
@@ -332,9 +358,18 @@ def _draw_screen():
         sent = packets_sent
         err = last_error
         dev = last_device
+    hci_name = _active_hci()
+
+    # HCI device
+    y = 16
+    hci_color = "#00FFFF" if len(HCI_DEVICES) > 1 else "#555"
+    d.text((2, y), f"BT: {hci_name}", font=font, fill=hci_color)
+    if len(HCI_DEVICES) > 1:
+        d.text((70, y), "K2:sw", font=font, fill="#555")
+    y += 12
 
     # Mode
-    y = 18
+    y += 2
     mode_colors = {
         "FastPair": "#4CAF50",
         "iOS": "#2196F3",
@@ -375,7 +410,7 @@ def _draw_screen():
     # Footer
     d.rectangle((0, 116, 127, 127), fill="#111")
     label = "OK:Stop" if active else "OK:Start"
-    d.text((2, 117), f"{label} K1:Mode K3:X", font=font, fill="#AAA")
+    d.text((2, 117), f"{label} K1:Md K2:BT K3:X", font=font, fill="#AAA")
 
     LCD.LCD_ShowImage(img, 0, 0)
 
@@ -385,7 +420,7 @@ def _draw_screen():
 # ---------------------------------------------------------------------------
 
 def main():
-    global mode_idx, speed_idx
+    global mode_idx, speed_idx, hci_dev_idx
 
     # Splash
     img = Image.new("RGB", (WIDTH, HEIGHT), "black")
@@ -395,8 +430,10 @@ def main():
     d.text((8, 42), "Android (FastPair)", font=font, fill="#4CAF50")
     d.text((8, 54), "iOS (Proximity)", font=font, fill="#2196F3")
     d.text((8, 66), "Windows (SwiftPair)", font=font, fill="#FF9800")
-    d.text((4, 84), "OK=Start  K1=Mode", font=font, fill="#666")
-    d.text((4, 96), "UP/DN=Speed K3=Exit", font=font, fill="#666")
+    devs_str = " / ".join(HCI_DEVICES)
+    d.text((4, 82), f"BT: {devs_str}", font=font, fill="#00FFFF")
+    d.text((4, 94), "OK=Start K1=Mode K2=BT", font=font, fill="#666")
+    d.text((4, 106), "UP/DN=Speed  K3=Exit", font=font, fill="#666")
     LCD.LCD_ShowImage(img, 0, 0)
     time.sleep(0.5)
 
@@ -419,6 +456,18 @@ def main():
             elif btn == "KEY1":
                 with lock:
                     mode_idx = (mode_idx + 1) % len(MODES)
+                time.sleep(0.25)
+
+            elif btn == "KEY2":
+                if len(HCI_DEVICES) > 1:
+                    was_spamming = False
+                    with lock:
+                        was_spamming = spamming
+                    if was_spamming:
+                        _stop_spam()
+                    hci_dev_idx = (hci_dev_idx + 1) % len(HCI_DEVICES)
+                    if was_spamming:
+                        _start_spam()
                 time.sleep(0.25)
 
             elif btn == "UP":
